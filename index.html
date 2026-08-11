@@ -2765,8 +2765,18 @@ function storageOk() {
   return typeof window !== 'undefined' && typeof window.storage !== 'undefined' && window.storage !== null;
 }
 
+// 개인 저장은 Claude 미리보기의 window.storage뿐 아니라, 실제 배포된 사이트에서는
+// 브라우저 자체 localStorage로도 동작해야 함(월드 랭킹판은 공유 데이터라 여전히 window.storage 필요)
+const LOCAL_SAVE_KEY = 'climb-or-bust-save';
+function localStoreOk() {
+  try {
+    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  } catch (e) { return false; }
+}
+function personalStoreOk() { return storageOk() || localStoreOk(); }
+
 async function saveGame() {
-  if (!storageOk()) return;
+  if (!personalStoreOk()) return;
   try {
     const payload = {
       playerName: state.playerName,
@@ -2785,20 +2795,31 @@ async function saveGame() {
       critTreeLevel: state.critTreeLevel,
       prestigeCount: state.prestigeCount
     };
-    await window.storage.set('save-state', JSON.stringify(payload), false);
+    if (storageOk()) {
+      await window.storage.set('save-state', JSON.stringify(payload), false);
+    } else if (localStoreOk()) {
+      window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(payload));
+    }
   } catch (e) { /* 저장 실패해도 게임 진행에는 지장 없음 */ }
 }
 
 async function loadGame() {
-  if (!storageOk()) return null;
+  if (!personalStoreOk()) return null;
   try {
-    const result = await window.storage.get('save-state', false);
-    if (!result) return null;
-    return JSON.parse(result.value);
+    if (storageOk()) {
+      const result = await window.storage.get('save-state', false);
+      return result ? JSON.parse(result.value) : null;
+    }
+    if (localStoreOk()) {
+      const raw = window.localStorage.getItem(LOCAL_SAVE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }
+    return null;
   } catch (e) {
     return null; // 저장된 게 없으면 첫 플레이로 간주
   }
 }
+
 
 function applySave(data) {
   state.playerName = data.playerName || '';
@@ -2969,7 +2990,7 @@ setInterval(() => {
 }, 1000);
 
 async function initPlayer() {
-  if (!storageOk()) { setupStage(); render(); return; }
+  if (!personalStoreOk()) { setupStage(); render(); return; }
   const data = await loadGame();
   if (data && data.playerName) {
     applySave(data);
