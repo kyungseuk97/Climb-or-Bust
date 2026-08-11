@@ -1,0 +1,2989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CLIMB OR BUST</title>
+<!-- 외부 웹폰트 의존 제거 — 시스템 폰트만으로 스타일 재현 -->
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #14171f;
+    --line: #262b36;
+    --accent: #ffdd33;
+    --gold: #f2b035;
+    --danger: #ff4d4d;
+    --ok: #35e0a1;
+    --purple: #b98cff;
+    --ink: #f4f5f7;
+    --ink-dim: #7c8494;
+    --btn-ink: #201c05;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg);
+    background-image: radial-gradient(circle at 50% -10%, #1c2130 0%, #0b0d12 55%);
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; color: var(--ink);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    transition: background 0.4s ease;
+    -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .frame { width: 100%; max-width: 420px; position: relative; }
+  .title {
+    text-align: center;
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Franklin Gothic Bold', sans-serif;
+    font-weight: 400;
+    font-size: 32px;
+    line-height: 1.3;
+    letter-spacing: 3px;
+    color: #fff8f0;
+    margin-bottom: 18px;
+    text-shadow:
+      0 0 4px #fff,
+      0 0 10px var(--accent),
+      0 0 20px var(--accent),
+      0 0 42px var(--accent),
+      0 0 4px #fff,
+      0 0 14px var(--purple),
+      0 0 30px var(--purple);
+    animation: neonFlicker 5s infinite;
+  }
+  @keyframes neonFlicker {
+    0%, 2%, 5%, 100% { opacity: 1; }
+    3% { opacity: 0.45; }
+    4% { opacity: 0.9; }
+    6% { opacity: 0.65; }
+    7% { opacity: 1; }
+  }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 20px 18px; box-shadow: 0 24px 60px rgba(0,0,0,0.45); margin-bottom: 12px; transition: background 0.3s ease, border-color 0.3s ease; }
+
+  .top-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--ink-dim); margin-bottom: 14px; }
+  .top-row b { color: var(--accent); font-weight: 800; }
+  .gold-tag { color: var(--gold); font-weight: 800; }
+
+  .level-value-wrap { position: relative; }
+  .level-value { text-align: center; font-size: 36px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+  .float-layer { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+
+  /* ===== 실시간 +/- 플로팅 넘버 (타격감) ===== */
+  .float-num {
+    position: absolute; top: 0; left: 50%; transform: translate(-50%, 0);
+    font-weight: 900; font-size: 24px; white-space: nowrap; pointer-events: none;
+    text-shadow: -1px -1px 0 rgba(0,0,0,0.5), 1px -1px 0 rgba(0,0,0,0.5), -1px 1px 0 rgba(0,0,0,0.5), 1px 1px 0 rgba(0,0,0,0.5);
+    animation: floatUp 1s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  .float-num.gain { color: var(--ok); }
+  .float-num.loss { color: var(--danger); font-size: 27px; }
+  @keyframes floatUp {
+    0%   { transform: translate(-50%, 0) scale(0.7); opacity: 0; }
+    15%  { transform: translate(-50%, -10px) scale(1.2); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--drift, 0px)), -68px) scale(1); opacity: 0; }
+  }
+
+  /* ===== 데미지 스킨 5종 — 획득(+)/손실(-)이 서로 다른 색으로 분명하게 구분됨 ===== */
+  .float-num.skin-impact {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; letter-spacing: 1px;
+    color: #fff; -webkit-text-stroke: 1.5px #1a1a1a;
+  }
+  .float-num.gain.skin-impact { font-size: 30px; text-shadow: 3px 3px 0 #1a1a1a, -1px -1px 0 #1a1a1a, 0 0 10px rgba(255,200,0,0.7); }
+  .float-num.loss.skin-impact { font-size: 33px; text-shadow: 3px 3px 0 #1a1a1a, -1px -1px 0 #1a1a1a, 0 0 12px rgba(255,50,50,0.8); }
+
+  .float-num.skin-neon { font-weight: 900; }
+  .float-num.gain.skin-neon {
+    font-size: 28px; color: #7fdcff;
+    text-shadow: 0 0 2px #fff, 0 0 8px rgba(79,200,255,0.95), 0 0 20px rgba(79,200,255,0.7), 0 0 34px rgba(47,176,255,0.5);
+  }
+  .float-num.loss.skin-neon {
+    font-size: 31px; color: #ff5fa2;
+    text-shadow: 0 0 2px #fff, 0 0 8px rgba(255,60,130,0.95), 0 0 20px rgba(255,60,130,0.7), 0 0 34px rgba(255,20,90,0.5);
+  }
+
+  .float-num.skin-royal { font-weight: 900; }
+  .float-num.gain.skin-royal {
+    font-size: 28px; color: #ffd166;
+    text-shadow: 0 0 2px #fff, 0 0 8px rgba(255,210,110,0.95), 0 0 20px rgba(255,190,80,0.7), 0 0 34px rgba(230,166,60,0.5);
+  }
+  .float-num.loss.skin-royal {
+    font-size: 31px; color: #d18cff;
+    text-shadow: 0 0 2px #fff, 0 0 8px rgba(200,120,255,0.95), 0 0 20px rgba(200,120,255,0.7), 0 0 34px rgba(180,91,255,0.5);
+  }
+
+  .float-num.skin-zombie { font-family: Papyrus, fantasy, 'Comic Sans MS', cursive; font-style: italic; letter-spacing: 2px; font-weight: 700; }
+  .float-num.gain.skin-zombie {
+    font-size: 30px; color: #8fe38f;
+    text-shadow: 0 0 2px #eaffe0, 0 0 8px rgba(120,220,110,0.9), 0 0 18px rgba(90,190,80,0.6);
+  }
+  .float-num.loss.skin-zombie {
+    font-size: 33px; color: #c4b48f;
+    text-shadow: 0 0 2px #f2f0e0, 0 0 8px rgba(150,130,90,0.9), 0 0 18px rgba(100,80,50,0.7);
+  }
+
+  .float-num.skin-cadena { font-weight: 900; letter-spacing: 0.5px; }
+  .float-num.gain.skin-cadena {
+    font-size: 29px; color: #ff9ee0;
+    text-shadow: 0 0 2px #fff, 0 0 8px rgba(255,120,220,0.95), 0 0 20px rgba(230,60,190,0.7), 0 0 34px rgba(180,20,150,0.5);
+  }
+  .float-num.loss.skin-cadena {
+    font-size: 32px; color: #ff5c8a;
+    text-shadow: 0 0 2px #fff, 0 0 8px rgba(255,60,110,0.95), 0 0 20px rgba(220,20,70,0.7), 0 0 34px rgba(150,10,50,0.5);
+  }
+  /* ===== 치명타 강조 (플레이어/보스 공통) ===== */
+  .float-num.crit {
+    animation-name: critPop; animation-duration: 1.15s;
+    filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 14px #ffd700);
+  }
+  @keyframes critPop {
+    0%   { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+    12%  { transform: translate(-50%, -16px) scale(1.55); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--drift, 0px)), -80px) scale(1.15); opacity: 0; }
+  }
+  .level-sub { text-align: center; font-size: 11px; color: var(--ink-dim); margin: 6px 0 14px; }
+
+  /* ===== 엔딩 크레딧 ===== */
+  /* ===== 엔딩 연출: 화면이 갈라진 뒤 카드가 내려꽂힘 ===== */
+  .split-fx { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 80; pointer-events: none; display: none; }
+  .split-fx.run { display: block; }
+  .slash {
+    position: absolute; top: 50%; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, transparent, #fff 15%, var(--accent) 50%, #fff 85%, transparent);
+    box-shadow: 0 0 20px var(--accent), 0 0 50px var(--accent);
+    transform: translateY(-50%) scaleX(0);
+    animation: slashIn 0.3s cubic-bezier(.2,.8,.3,1) forwards;
+  }
+  @keyframes slashIn {
+    0%   { transform: translateY(-50%) scaleX(0); opacity: 0; }
+    60%  { transform: translateY(-50%) scaleX(1); opacity: 1; }
+    100% { transform: translateY(-50%) scaleX(1); opacity: 0.9; }
+  }
+  .split-half {
+    position: absolute; left: 0; right: 0; height: 50%;
+    background: var(--bg); background-image: radial-gradient(circle at 50% -10%, #1c2130 0%, #0b0d12 55%);
+  }
+  .split-half.top {
+    top: 0; border-bottom: 2px solid var(--accent); box-shadow: 0 4px 30px rgba(255,221,51,0.5);
+    animation: splitTop 0.75s cubic-bezier(.7,0,.3,1) 0.28s forwards;
+  }
+  .split-half.bottom {
+    bottom: 0; border-top: 2px solid var(--accent); box-shadow: 0 -4px 30px rgba(255,221,51,0.5);
+    animation: splitBottom 0.75s cubic-bezier(.7,0,.3,1) 0.28s forwards;
+  }
+  @keyframes splitTop    { to { transform: translateY(-102%); } }
+  @keyframes splitBottom { to { transform: translateY(102%); } }
+
+  .ending-card.slam { animation: slamDown 0.6s cubic-bezier(.6,-0.2,.3,1.5) forwards; }
+  @keyframes slamDown {
+    0%   { transform: translateY(-130vh) scale(1.25) rotate(-3deg); opacity: 0; }
+    62%  { transform: translateY(14px) scale(0.96) rotate(1deg); opacity: 1; }
+    78%  { transform: translateY(-8px) scale(1.02) rotate(-0.5deg); }
+    100% { transform: translateY(0) scale(1) rotate(0); opacity: 1; }
+  }
+  #ending-overlay.impact { animation: endingShake 0.4s ease; }
+  @keyframes endingShake {
+    0%,100% { transform: translate(0,0); }
+    20% { transform: translate(-9px, 5px); } 40% { transform: translate(8px, -4px); }
+    60% { transform: translate(-5px, 3px); } 80% { transform: translate(4px, -2px); }
+  }
+  .ending-stats .row { opacity: 0; animation: rowIn 0.3s ease forwards; }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+
+  .ending-card { border-color: var(--accent); box-shadow: 0 0 80px rgba(255,221,51,0.45); max-width: 340px; }
+  .ending-title {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-size: 30px; letter-spacing: 3px; color: #fff8f0; text-align: center; margin-bottom: 4px;
+    text-shadow: 0 0 4px #fff, 0 0 14px var(--accent), 0 0 30px var(--accent), 0 0 16px var(--purple);
+  }
+  .ending-sub { text-align: center; font-size: 11px; letter-spacing: 2px; color: var(--accent); margin-bottom: 18px; }
+  .ending-stats { text-align: left; font-size: 12px; line-height: 2; margin-bottom: 18px; }
+  .ending-stats .row { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); }
+  .ending-stats .row span:first-child { color: var(--ink-dim); }
+  .ending-stats .row b { color: var(--ok); }
+  .ending-thanks { text-align: center; font-size: 11px; color: var(--ink-dim); line-height: 1.7; margin-bottom: 16px; }
+
+  .bar-track { height: 12px; border-radius: 6px; background: color-mix(in srgb, var(--line) 60%, transparent); overflow: hidden; margin-bottom: 6px; border: 1px solid var(--line); }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--ok), var(--accent)); width: 0%; transition: width 0.2s ease; }
+  .bar-track.unknown { background-image: repeating-linear-gradient(45deg, rgba(255,87,87,0.18) 0 8px, rgba(255,87,87,0.05) 8px 16px); animation: unknownDrift 1s linear infinite; }
+  @keyframes unknownDrift { to { background-position: 22px 0; } }
+  .bar-caption { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-dim); margin-bottom: 16px; }
+  .chance { color: var(--ok); font-weight: 800; }
+  .chance.low { color: var(--danger); }
+
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .btn-row.sub-row { margin-bottom: 12px; }
+  .btn-row.sub-row button { flex: 1; padding: 10px 6px; font-size: 11px; }
+  button { border: none; border-radius: 10px; padding: 14px 8px; font-size: 13px; font-weight: 800; cursor: pointer; transition: transform 0.08s ease; }
+  button:active { transform: translateY(2px); }
+  #grow-btn { flex: 1; background: var(--accent); color: var(--btn-ink); }
+  #challenge-btn { flex: 1; background: transparent; border: 2px solid var(--ok); color: var(--ok); }
+  #challenge-btn:disabled { border-color: var(--line); color: var(--ink-dim); cursor: not-allowed; }
+  #shop-toggle { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
+  #skin-toggle { background: transparent; border: 2px solid var(--purple); color: var(--purple); }
+  #rebirth-toggle { background: transparent; border: 2px solid var(--ok); color: var(--ok); }
+
+  .log { text-align: center; font-size: 12px; min-height: 16px; color: var(--ink-dim); margin-bottom: 10px; }
+  .log.success { color: var(--ok); font-weight: 700; }
+  .log.fail { color: var(--danger); font-weight: 700; }
+
+  .buffs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; min-height: 20px; margin-bottom: 6px; }
+  .buff-chip { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); }
+  .buff-power { background: color-mix(in srgb, var(--danger) 18%, transparent); color: #ff9a4d; border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+  .buff-insure { background: color-mix(in srgb, var(--purple) 18%, transparent); color: var(--purple); border-color: color-mix(in srgb, var(--purple) 40%, transparent); }
+
+  .streak-row { display: flex; justify-content: center; gap: 14px; font-size: 10px; color: var(--ink-dim); margin-bottom: 10px; }
+  .streak-row b { color: var(--ok); }
+  .streak-row b.lose { color: var(--danger); }
+
+  .stats { display: flex; justify-content: space-between; border-top: 1px dashed var(--line); padding-top: 10px; font-size: 11px; color: var(--ink-dim); }
+
+  .side-panel { display: none; }
+  .side-panel.open { display: block; }
+  .panel-title { font-size: 12px; letter-spacing: 1px; color: var(--ink-dim); margin-bottom: 10px; }
+  .row-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; background: color-mix(in srgb, var(--panel) 80%, black); }
+  .row-item.gacha { border-color: color-mix(in srgb, var(--purple) 50%, var(--line)); }
+  .row-item.locked { opacity: 0.55; }
+  .row-item.current { border-color: var(--accent); }
+  .row-info { line-height: 1.4; flex: 1; }
+  .row-name { font-size: 13px; font-weight: 700; }
+  .row-desc { font-size: 11px; color: var(--ink-dim); }
+  .row-item button { flex: none; padding: 8px 12px; font-size: 12px; border: 1px solid var(--gold); background: transparent; color: var(--gold); border-radius: 6px; }
+  .row-item.gacha button { border-color: var(--purple); color: var(--purple); }
+  .row-item button:disabled { border-color: var(--line); color: var(--ink-dim); cursor: not-allowed; }
+
+  .skin-row { align-items: center; }
+  .skin-swatch {
+    width: 42px; height: 42px; border-radius: 10px; flex: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.25);
+  }
+
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .panel.shake { animation: shake 0.25s ease; }
+
+  /* ===== 보스전 공통 분위기 ===== */
+  @keyframes bossVignette {
+    0%, 100% { box-shadow: 0 24px 60px rgba(0,0,0,0.45), inset 0 0 40px rgba(255,40,40,0.35); }
+    50% { box-shadow: 0 24px 60px rgba(0,0,0,0.45), inset 0 0 65px rgba(255,40,40,0.6); }
+  }
+  .panel.boss-mode { animation: bossVignette 1.6s ease-in-out infinite; border-color: #ff3b3b; }
+  .panel.invasion-mode { animation: bossVignette 0.9s ease-in-out infinite; border-color: #c04dff; }
+  @keyframes bossEntrance {
+    0% { transform: scale(1); }
+    10% { transform: translateX(-16px) scale(1.03) rotate(-1.5deg); }
+    25% { transform: translateX(16px) scale(1.03) rotate(1.5deg); }
+    40% { transform: translateX(-12px) rotate(-1deg); }
+    55% { transform: translateX(12px) rotate(1deg); }
+    70% { transform: translateX(-6px); }
+    85% { transform: translateX(6px); }
+    100% { transform: translateX(0) scale(1) rotate(0); }
+  }
+  .panel.boss-entrance { animation: bossEntrance 0.5s ease; }
+
+  .boss-banner {
+    display: none; text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 3px;
+    color: #ff5757; background: rgba(255,59,59,0.12); border: 1px solid rgba(255,59,59,0.4);
+    border-radius: 6px; padding: 6px; margin-bottom: 12px;
+    animation: bossBannerPulse 1s ease-in-out infinite;
+  }
+  .boss-banner.show { display: block; }
+  .boss-banner.invasion { color: #d68cff; background: rgba(192,77,255,0.14); border-color: rgba(192,77,255,0.45); }
+  @keyframes bossBannerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+  /* 디버프 창 — 보스전 중 걸려있는 기믹을 설명 */
+  .debuff-window { display: none; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .debuff-window.show { display: flex; }
+  .debuff-row {
+    display: flex; align-items: flex-start; gap: 8px; padding: 7px 10px;
+    background: rgba(255,59,59,0.08); border: 1px solid rgba(255,59,59,0.3); border-radius: 6px;
+    font-size: 11px; color: var(--ink-dim); line-height: 1.4;
+  }
+  .debuff-row.active { background: rgba(255,209,102,0.14); border-color: rgba(255,209,102,0.5); }
+  .emergency-retreat {
+    display: none; width: 100%; margin-bottom: 10px; padding: 10px;
+    background: rgba(192,77,255,0.15); border: 2px dashed var(--purple); color: var(--purple);
+    font-size: 12px; font-weight: 800; border-radius: 8px; cursor: pointer;
+    animation: emergencyPulse 1.2s ease-in-out infinite;
+  }
+  .emergency-retreat.show { display: block; }
+  @keyframes emergencyPulse { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
+  .debuff-icon { font-size: 15px; flex: none; }
+  .debuff-text b { color: var(--ink); }
+
+  /* 전체 화면 보스 진입 플래시 — 임팩트 강화 */
+  .boss-flash {
+    position: fixed; inset: 0; z-index: 60; pointer-events: none;
+    background: radial-gradient(circle, rgba(255,59,59,0.55), rgba(255,59,59,0) 70%);
+    animation: bossFlashPop 0.5s ease forwards;
+  }
+  .boss-flash.invasion { background: radial-gradient(circle, rgba(192,77,255,0.6), rgba(192,77,255,0) 70%); }
+  @keyframes bossFlashPop { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* 요구 경험치 스파이크 */
+  .level-sub.spiking { color: #ff5757; font-weight: 800; font-size: 13px; animation: spikePulse 0.4s ease-in-out infinite; }
+  @keyframes spikePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  .level-sub.locked-target { color: #ff5757; font-weight: 800; }
+
+  /* ===== 보스 스킬 패링 (리듬 액션) ===== */
+  .skill-overlay {
+    position: absolute; inset: 0; border-radius: 12px; z-index: 40; display: none;
+    background: rgba(8,4,10,0.72); backdrop-filter: blur(1px); overflow: hidden;
+  }
+  .skill-overlay.show { display: block; }
+  .skill-banner {
+    position: absolute; top: 12px; left: 0; right: 0; text-align: center;
+    font-size: 13px; font-weight: 900; letter-spacing: 2px; color: #ff5757;
+    text-shadow: 0 0 10px rgba(255,60,60,0.8);
+    animation: skillBannerPulse 0.6s ease-in-out infinite;
+  }
+  @keyframes skillBannerPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+  .skill-combo {
+    position: absolute; bottom: 14px; left: 0; right: 0; text-align: center;
+    font-size: 12px; font-weight: 800; color: var(--accent);
+  }
+  .skill-warning {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; gap: 10px;
+    background: radial-gradient(circle, rgba(255,40,40,0.28), rgba(255,20,20,0.05) 70%);
+    animation: skillWarnFlash 0.45s ease-in-out infinite;
+  }
+  .skill-warning .warn-main {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-size: 26px; letter-spacing: 2px; color: #fff;
+    text-shadow: 0 0 8px #ff3b3b, 0 0 22px #ff3b3b, 0 0 40px rgba(255,60,60,0.7);
+  }
+  .skill-warning .warn-sub {
+    font-size: 13px; font-weight: 800; letter-spacing: 4px; color: var(--accent);
+    text-shadow: 0 0 10px rgba(255,221,51,0.8);
+  }
+  @keyframes skillWarnFlash { 0%,100% { opacity: 1; } 50% { opacity: 0.72; } }
+
+  .skill-target {
+    position: absolute; width: 52px; height: 52px; margin: -26px 0 0 -26px;
+    border-radius: 50%; cursor: pointer;
+    border: 3px solid var(--ok); background: rgba(53,224,161,0.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .skill-ring {
+    position: absolute; inset: -4px; border-radius: 50%;
+    border: 3px solid var(--accent); opacity: 0.9;
+    animation: skillRingShrink linear forwards;
+  }
+  @keyframes skillRingShrink {
+    0%   { transform: scale(2.6); opacity: 0.15; }
+    70%  { opacity: 0.9; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .skill-judge {
+    position: absolute; font-size: 15px; font-weight: 900; pointer-events: none;
+    animation: floatUp 0.7s ease-out forwards; white-space: nowrap;
+  }
+  .skill-judge.perfect { color: #ffd166; text-shadow: 0 0 10px rgba(255,209,102,0.9); }
+  .skill-judge.good { color: var(--ok); }
+  .skill-judge.miss { color: var(--danger); }
+
+  /* 타겟이 생성되는 영역 — 경험치 표시와 TRAIN 버튼 사이의 좁은 밴드로 한정해
+     화면을 크게 왔다갔다 하지 않고도 칠 수 있게 함 */
+  .skill-field {
+    position: absolute; left: 8px; right: 8px; pointer-events: none;
+    border: 1px dashed rgba(255,255,255,0.10); border-radius: 10px;
+  }
+
+  /* 시퀀스 종료 결과 — 이번 패링으로 얻은 순 경험치 표시 */
+  .skill-result {
+    position: absolute; inset: 0; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    background: rgba(6,4,10,0.55); text-align: center;
+  }
+  .skill-result.show { display: flex; animation: srPop 0.3s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes srPop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .skill-result .sr-head {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-size: 22px; letter-spacing: 2px; color: #fff;
+  }
+  .skill-result .sr-net { font-size: 30px; font-weight: 900; }
+  .skill-result .sr-sub { font-size: 11px; color: var(--ink-dim); letter-spacing: 1px; }
+  .skill-result.perfect .sr-head { text-shadow: 0 0 10px #ffd166, 0 0 26px #ffd166; }
+  .skill-result.perfect .sr-net { color: #ffd166; text-shadow: 0 0 12px rgba(255,209,102,0.9); }
+  .skill-result.good .sr-net { color: var(--ok); text-shadow: 0 0 10px rgba(53,224,161,0.8); }
+  .skill-result.poor .sr-net { color: var(--danger); text-shadow: 0 0 10px rgba(255,77,77,0.8); }
+
+  /* 키보드 입력 타격 — 클릭 타격과 색으로 확실히 구분 */
+  .skill-target.key-mode { border-color: var(--purple); background: rgba(185,140,255,0.18); }
+  .skill-target.key-mode .skill-ring { border-color: var(--purple); }
+  .key-label {
+    font-size: 22px; font-weight: 900; color: #fff; line-height: 1;
+    text-shadow: 0 0 8px var(--purple), 0 0 18px var(--purple);
+  }
+
+  /* 패링 성공 시 흩어지는 유리 파편 */
+  .ring-shard {
+    position: absolute; width: 7px; height: 7px; margin: -3px 0 0 -3px;
+    background: linear-gradient(135deg, #ffffff, var(--accent));
+    clip-path: polygon(50% 0%, 100% 62%, 70% 100%, 12% 82%);
+    pointer-events: none;
+    animation: shardFly 0.55s cubic-bezier(.15,.7,.35,1) forwards;
+  }
+  .ring-shard.perfect {
+    width: 9px; height: 9px; margin: -4px 0 0 -4px;
+    background: linear-gradient(135deg, #ffffff, #ffd166);
+    box-shadow: 0 0 8px rgba(255,209,102,0.9);
+  }
+  @keyframes shardFly {
+    0%   { transform: translate(0,0) rotate(0deg) scale(1.2); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.3); opacity: 0; }
+  }
+
+  /* 클릭 무효형 */
+  #grow-btn.locked-click { position: relative; opacity: 0.55; cursor: not-allowed; }
+  #grow-btn.locked-click::after { content: '🔒'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 13px; }
+  @keyframes deniedX {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    30% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -80%) scale(1); }
+  }
+  .denied-x {
+    position: absolute; left: 50%; top: 50%; color: var(--danger); font-weight: 900; font-size: 20px;
+    pointer-events: none; animation: deniedX 0.6s ease forwards;
+  }
+
+  /* 방치 무효형: 성에 */
+  #stat-idle.frozen { color: #7fd3ff; text-shadow: 0 0 6px rgba(127,211,255,0.6); }
+  @keyframes frostDrift { 0% { background-position: 0 0; } 100% { background-position: 40px 0; } }
+  .frost-overlay {
+    display: none; position: absolute; inset: -4px -8px; border-radius: 8px; pointer-events: none;
+    background-image: repeating-linear-gradient(115deg, rgba(160,220,255,0.12) 0 2px, transparent 2px 8px);
+    animation: frostDrift 3s linear infinite;
+  }
+  .frost-overlay.show { display: block; }
+  .stats { position: relative; }
+  .panel { position: relative; overflow: visible; }
+
+  /* ===== 연승/연패: 패널 하단 바깥쪽에서 부드럽게 타오르는 유기적 불꽃/서리 ===== */
+  .fx-wall {
+    position: absolute; left: -4%; right: -4%; bottom: -6px; height: 60px;
+    pointer-events: none; opacity: 0; transition: opacity 0.5s ease; z-index: 0;
+    display: flex; align-items: flex-end; justify-content: space-between;
+  }
+  .fx-wall.show { opacity: 1; }
+  .fx-wall::before { /* 바닥에 깔리는 밑불/서리 바탕 글로우 */
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 65%;
+    filter: blur(7px);
+  }
+  .fx-wall.heat { filter: url(#fire-turb); }
+  .fx-wall.frost { filter: url(#frost-turb); }
+  .fx-wall.heat::before { background: linear-gradient(to top, rgba(255,70,0,0.85), rgba(255,140,0,0.35) 60%, transparent 100%); }
+  .fx-wall.frost::before { background: linear-gradient(to top, rgba(140,200,255,0.75), rgba(170,220,255,0.3) 60%, transparent 100%); }
+
+  .fx-blob {
+    flex: none; border-radius: 50% 50% 45% 45% / 65% 65% 35% 35%;
+    filter: blur(3.5px);
+    transform-origin: bottom center;
+  }
+  .fx-wall.heat .fx-blob {
+    background: radial-gradient(circle at 50% 75%, #fff6c8 0%, #ffb020 30%, #ff5a00 60%, rgba(200,20,0,0) 78%);
+    animation: heatBlob ease-in-out infinite;
+  }
+  .fx-wall.frost .fx-blob {
+    background: radial-gradient(circle at 50% 75%, #ffffff 0%, #cdeaff 30%, #6fb8ff 60%, rgba(60,120,220,0) 78%);
+    animation: frostBlob ease-in-out infinite;
+  }
+  @keyframes heatBlob {
+    0%, 100% { transform: scaleY(1) scaleX(1) translateY(0); }
+    30%      { transform: scaleY(1.22) scaleX(0.88) translateY(-3px); }
+    60%      { transform: scaleY(0.85) scaleX(1.1) translateY(1px); }
+    80%      { transform: scaleY(1.1) scaleX(0.95) translateY(-2px); }
+  }
+  @keyframes frostBlob {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50%      { transform: scale(1.08); opacity: 1; }
+  }
+  .restart-link {
+    display: block; width: 100%; margin-top: 10px; background: transparent; border: none;
+    color: var(--ink-dim); font-size: 10px; font-weight: 400; text-decoration: underline;
+    opacity: 0.6; padding: 4px; cursor: pointer;
+  }
+  .restart-link:hover { opacity: 1; color: var(--danger); }
+  .mute-btn { background: transparent; border: none; font-size: 14px; padding: 2px; cursor: pointer; opacity: 0.7; }
+  .mute-btn:hover { opacity: 1; }
+
+  .rebirth-summary { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-dim); margin-bottom: 12px; }
+  .rebirth-summary b { color: var(--ok); font-size: 14px; }
+  .tree-row.maxed { opacity: 0.65; border-color: var(--accent); }
+  .tree-row { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; background: color-mix(in srgb, var(--panel) 80%, black); }
+  .tree-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .tree-name { font-size: 13px; font-weight: 700; }
+  .tree-level { font-size: 11px; color: var(--ok); }
+  .tree-bar-track { height: 6px; border-radius: 3px; background: #1e2330; overflow: hidden; margin-bottom: 6px; }
+  .tree-bar-fill { height: 100%; background: var(--ok); }
+  .tree-row-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--ink-dim); }
+  .tree-row-bottom button { padding: 6px 12px; font-size: 11px; border: 1px solid var(--ok); background: transparent; color: var(--ok); border-radius: 6px; }
+  .tree-row-bottom button:disabled { border-color: var(--line); color: var(--ink-dim); cursor: not-allowed; }
+  #rebirth-btn { width: 100%; background: var(--ok); color: #06140d; margin-top: 4px; padding: 14px; }
+  #rebirth-btn:disabled { background: var(--line); color: var(--ink-dim); cursor: not-allowed; }
+  .rebirth-note { text-align: center; font-size: 11px; color: var(--ink-dim); margin-top: 8px; }
+
+  .rank-note { font-size: 11px; color: var(--ink-dim); margin-bottom: 10px; }
+  .rank-note b { color: var(--ok); }
+  #rank-refresh-link { text-decoration: underline; cursor: pointer; }
+  #rank-refresh-link:hover { color: var(--ink); }
+  .rank-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; font-size: 12px; }
+  .rank-row.me { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+  .rank-pos { width: 22px; text-align: center; font-weight: 800; color: var(--ink-dim); flex: none; }
+  .rank-row:nth-child(1) .rank-pos { color: #ffd166; }
+  .rank-row:nth-child(2) .rank-pos { color: #cfd6de; }
+  .rank-row:nth-child(3) .rank-pos { color: #d69a5c; }
+  .rank-name { flex: 1; font-weight: 700; }
+  .rank-stage { color: var(--ok); font-weight: 800; }
+  .rank-meta { font-size: 10px; color: var(--ink-dim); }
+  .result-card.invasion-card { border-color: var(--purple); box-shadow: 0 0 60px rgba(185,140,255,0.5); }
+  .result-card.invasion-card .result-name { color: var(--purple); }
+
+  @keyframes glowPulseSpurt {
+    0%, 100% { box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 rgba(53,224,161,0); }
+    50% { box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 26px rgba(53,224,161,0.55); }
+  }
+  .panel.glow-spurt { animation: glowPulseSpurt 1.4s ease-in-out infinite; }
+  @keyframes glowPulsePower {
+    0%, 100% { box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 rgba(255,109,58,0); }
+    50% { box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 34px rgba(255,109,58,0.7); }
+  }
+  .panel.glow-power { animation: glowPulsePower 0.9s ease-in-out infinite; }
+
+  .spark { position: absolute; width: 4px; height: 4px; border-radius: 50%; pointer-events: none; animation: sparkFloat 0.9s ease-out forwards; }
+  @keyframes sparkFloat { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-40px) scale(0.3); opacity: 0; } }
+
+  .overlay { position: fixed; inset: 0; background: rgba(6,7,10,0.75); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .overlay.show { display: flex; }
+  .result-card { background: #16101f; border: 2px solid var(--purple); border-radius: 16px; padding: 30px 24px; text-align: center; max-width: 300px; animation: pop 0.35s cubic-bezier(.2,1.4,.4,1); box-shadow: 0 0 60px rgba(185,140,255,0.5); }
+  @keyframes pop { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .result-card .big { font-size: 15px; color: var(--ink-dim); letter-spacing: 2px; margin-bottom: 10px; }
+  .result-card .result-name { font-size: 22px; font-weight: 800; color: var(--purple); margin-bottom: 8px; }
+  .result-card .result-desc { font-size: 12px; color: var(--ink-dim); margin-bottom: 18px; }
+  .result-card button { background: var(--purple); color: #16101f; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 800; }
+  .result-card.miss { border-color: var(--ink-dim); box-shadow: 0 0 40px rgba(124,132,148,0.3); }
+  .result-card.miss .result-name { color: var(--ink-dim); }
+  .result-card.jackpot { border-color: var(--accent); box-shadow: 0 0 70px rgba(255,221,51,0.6); }
+  .result-card.jackpot .result-name { color: var(--accent); }
+
+  /* ===== 스킨 정의 =====
+     성공(--ok)/실패(--danger) 색상은 테마와 무관하게 고정 — 절대 오버라이드하지 않음 */
+  body.skin-constellation {
+    --bg:#050814; --panel:#0c1330; --line:#1b2550; --accent:#cde3ff; --gold:#8fb8ff;
+    --purple:#7c8cff; --ink:#eaf3ff; --ink-dim:#7d8fc2; --btn-ink:#02040a;
+    background-image:
+      radial-gradient(ellipse 65% 30% at 50% 40%, rgba(190,200,255,0.14), transparent 70%),
+      radial-gradient(1.6px 1.6px at 15px 25px, #fff, transparent),
+      radial-gradient(1px 1px at 70px 70px, #cde, transparent),
+      radial-gradient(1.8px 1.8px at 130px 35px, #fff, transparent),
+      radial-gradient(1px 1px at 50px 120px, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 165px 140px, #cde, transparent),
+      radial-gradient(1px 1px at 100px 100px, #fff, transparent),
+      radial-gradient(1.4px 1.4px at 190px 60px, #fff, transparent),
+      radial-gradient(1px 1px at 30px 160px, #cde, transparent),
+      radial-gradient(circle at 50% -10%, #16205a 0%, #050814 60%);
+    background-size: 100% 100%, 200px 200px, 200px 200px, 200px 200px, 200px 200px, 200px 200px, 200px 200px, 200px 200px, 200px 200px, 100% 100%;
+  }
+  body.skin-constellation .panel { box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 30px rgba(205,227,255,0.12); }
+
+  body.skin-pcb {
+    --bg:#0d0f10; --panel:#161a1c; --line:#3a4348; --accent:#ff8a3d; --gold:#ffcf6b;
+    --purple:#4fd8ff; --ink:#eef2f3; --ink-dim:#8b959a; --btn-ink:#160c02;
+    background-image:
+      radial-gradient(circle, rgba(255,138,61,0.55) 1.4px, transparent 1.8px),
+      repeating-linear-gradient(0deg, rgba(255,138,61,0.16) 0 1.5px, transparent 1.5px 22px),
+      repeating-linear-gradient(90deg, rgba(255,138,61,0.16) 0 1.5px, transparent 1.5px 22px),
+      radial-gradient(circle at 50% -10%, #22282a 0%, #0d0f10 60%);
+    background-size: 22px 22px, 22px 22px, 22px 22px, 100% 100%;
+  }
+  body.skin-pcb .panel { border-width: 2px; box-shadow: 0 24px 60px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,138,61,0.15); }
+
+  body.skin-blocks {
+    --bg:#101018; --panel:#181826; --line:#2e2e44; --accent:#ffcc00; --gold:#00e5ff;
+    --purple:#a855f7; --ink:#f5f5ff; --ink-dim:#8888aa; --btn-ink:#1a1400;
+    background-image: radial-gradient(circle at 50% -10%, #23233a 0%, #101018 60%);
+  }
+  body.skin-blocks .panel { position: relative; padding-top: 30px; overflow: hidden; }
+  body.skin-blocks .panel::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px;
+    background: linear-gradient(90deg, #ffcc00 0 25%, #00e5ff 25% 50%, #a855f7 50% 75%, #35e0a1 75% 100%);
+  }
+
+  .block-stack { display: none; gap: 8px; justify-content: center; margin: 10px 0 14px; }
+  body.skin-blocks .block-stack { display: flex; }
+  .block-slot {
+    position: relative; width: 24px; height: 20px; margin-top: 8px;
+    border-radius: 2px 2px 4px 4px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 5px rgba(0,0,0,0.25);
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .block-stud {
+    position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+    width: 10px; height: 9px; border-radius: 50% 50% 3px 3px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+    transition: background 0.2s ease;
+  }
+  .block-slot.filled { border-color: rgba(0,0,0,0.25); }
+  .block-stack.burst .block-slot.filled {
+    animation: blockBurst 0.5s ease forwards;
+    animation-delay: calc(var(--i, 0) * 40ms);
+  }
+  @keyframes blockBurst {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+    55% { transform: scale(1.5) rotate(14deg); opacity: 1; }
+    100% { transform: scale(0.2) rotate(28deg); opacity: 0; }
+  }
+
+  /* PCB 회로 연결 트랙 */
+  .pcb-track { display: none; position: relative; height: 26px; margin: 4px 0 14px; }
+  body.skin-pcb .pcb-track { display: block; }
+  .pcb-track::before {
+    content: ''; position: absolute; top: 50%; left: 6px; right: 6px; height: 2px;
+    background: rgba(255,255,255,0.10); transform: translateY(-50%);
+  }
+  .pcb-line-fill {
+    position: absolute; top: 50%; left: 6px; height: 2px; width: 0%;
+    background: var(--accent); box-shadow: 0 0 6px var(--accent);
+    transform: translateY(-50%); transition: width 0.25s ease;
+  }
+  .pcb-nodes { position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: center; }
+  .pcb-node {
+    width: 14px; height: 14px; border-radius: 4px; z-index: 1;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .pcb-node.lit { background: var(--accent); border-color: transparent; box-shadow: 0 0 8px var(--accent); }
+  .pcb-track.burst .pcb-node.lit { animation: pcbFlash 0.5s ease; }
+  .pcb-track.burst .pcb-line-fill { animation: pcbFlash 0.5s ease; }
+  @keyframes pcbFlash {
+    0%, 100% { box-shadow: 0 0 8px var(--accent); }
+    50% { box-shadow: 0 0 24px 8px var(--accent); }
+  }
+
+  /* 별자리 연결 트랙 */
+  .star-track { display: none; position: relative; height: 26px; margin: 4px 0 14px; }
+  body.skin-constellation .star-track { display: block; }
+  .star-track::before {
+    content: ''; position: absolute; top: 50%; left: 6px; right: 6px; height: 1px;
+    background: rgba(255,255,255,0.10); transform: translateY(-50%);
+  }
+  .star-line-fill {
+    position: absolute; top: 50%; left: 6px; height: 1px; width: 0%;
+    background: linear-gradient(90deg, rgba(205,227,255,0.9), rgba(205,227,255,0.4));
+    box-shadow: 0 0 6px rgba(205,227,255,0.8);
+    transform: translateY(-50%); transition: width 0.25s ease;
+  }
+  .star-nodes { position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: center; }
+  .star-slot {
+    width: 7px; height: 7px; border-radius: 50%; z-index: 1;
+    background: rgba(255,255,255,0.12);
+    transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .star-slot.filled { background: #fff; box-shadow: 0 0 6px #fff, 0 0 14px #cde3ff; }
+  .star-track.burst .star-slot.filled {
+    animation: starBurst 0.5s ease forwards;
+    animation-delay: calc(var(--i, 0) * 30ms);
+  }
+  .star-track.burst .star-line-fill { animation: pcbFlash 0.5s ease; }
+  @keyframes starBurst {
+    0% { transform: scale(1); }
+    50% { transform: scale(2.2); box-shadow: 0 0 14px #fff, 0 0 26px #cde3ff; }
+    100% { transform: scale(1); }
+  }
+
+  body.skin-rainbow {
+    --bg:#0a0a12; --panel:#14141f; --line:#2a2a3d; --accent:#ff6ec7; --gold:#ffd166;
+    --purple:#b98cff; --ink:#f4f5f7; --ink-dim:#8a8ea3; --btn-ink:#1a0a14;
+  }
+  body.skin-rainbow .panel {
+    border: 2px solid transparent;
+    background-image: linear-gradient(var(--panel), var(--panel)), linear-gradient(90deg, #ff6ec7, #ffd166, #6effc7, #b98cff, #ff6ec7);
+    background-origin: border-box; background-clip: padding-box, border-box;
+    animation: rainbowShift 4s linear infinite;
+  }
+  @keyframes rainbowShift { to { filter: hue-rotate(360deg); } }
+
+  .rainbow-arc-wrap { display: none; height: 72px; margin: -8px 0 2px; }
+  body.skin-rainbow .rainbow-arc-wrap { display: block; }
+  #rainbow-arc-svg { width: 100%; height: 100%; overflow: visible; }
+  .rainbow-band { fill: none; stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 0.25s ease; }
+  .rainbow-arc-wrap.burst .rainbow-band {
+    animation: rainbowArcFlash 0.5s ease;
+  }
+  @keyframes rainbowArcFlash {
+    0%, 100% { filter: drop-shadow(0 0 0 transparent); stroke-width: 7; }
+    50% { filter: drop-shadow(0 0 10px currentColor); stroke-width: 9; }
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <svg width="0" height="0" style="position:absolute">
+    <filter id="fire-turb" x="-30%" y="-30%" width="160%" height="160%">
+      <feTurbulence id="fire-turb-noise" type="fractalNoise" baseFrequency="0.025 0.09" numOctaves="2" seed="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="frost-turb" x="-30%" y="-30%" width="160%" height="160%">
+      <feTurbulence id="frost-turb-noise" type="fractalNoise" baseFrequency="0.03 0.05" numOctaves="2" seed="7" result="noise2"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise2" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
+  <div class="title">CLIMB OR BUST</div>
+
+  <div class="rainbow-arc-wrap" id="rainbow-arc-wrap">
+    <svg id="rainbow-arc-svg" viewBox="0 0 400 100" preserveAspectRatio="xMidYMax meet"></svg>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="fx-wall heat" id="fx-heat"></div>
+    <div class="skill-overlay" id="skill-overlay">
+      <div class="skill-banner" id="skill-banner">⚡ PARRY!</div>
+      <div class="skill-warning" id="skill-warning">
+        <div class="warn-main">⚠ BOSS IS CASTING</div>
+        <div class="warn-sub" id="skill-pattern-name"></div>
+        <div class="warn-sub" id="skill-countdown">GET READY</div>
+      </div>
+      <div class="skill-combo" id="skill-combo"></div>
+      <div class="skill-field" id="skill-field"></div>
+      <div class="skill-result" id="skill-result"></div>
+    </div>
+    <div class="fx-wall frost" id="fx-frost"></div>
+    <div class="top-row">
+      <span>STAGE <b id="stage-no">1</b></span>
+      <span style="display:flex; align-items:center; gap:10px;">
+        <button id="mute-toggle" class="mute-btn">🔊</button>
+        <span class="gold-tag" id="gold-value">💰 0</span>
+      </span>
+    </div>
+
+    <div class="level-value-wrap">
+      <div class="level-value" id="level-value">0</div>
+      <div class="float-layer" id="float-layer"></div>
+    </div>
+    <div class="level-sub" id="req-sub">Target: 20</div>
+
+    <div class="boss-banner" id="boss-banner">⚠ BOSS</div>
+    <div class="debuff-window" id="debuff-window"></div>
+    <button class="emergency-retreat" id="emergency-retreat">🆘 Stuck? Free Emergency Retreat</button>
+
+    <div class="bar-track" id="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+    <div class="bar-caption">
+      <span>Clear Chance <span class="chance" id="chance-text">0%</span></span>
+      <span id="ratio-text">0 / 20</span>
+    </div>
+
+    <div class="block-stack" id="block-stack"></div>
+    <div class="pcb-track" id="pcb-track">
+      <div class="pcb-line-fill" id="pcb-line-fill"></div>
+      <div class="pcb-nodes" id="pcb-nodes"></div>
+    </div>
+    <div class="star-track" id="star-track">
+      <div class="star-line-fill" id="star-line-fill"></div>
+      <div class="star-nodes" id="star-nodes"></div>
+    </div>
+
+    <div class="btn-row">
+      <button id="grow-btn">TRAIN</button>
+      <button id="challenge-btn" disabled>CHALLENGE</button>
+    </div>
+    <div class="btn-row sub-row">
+      <button id="shop-toggle">SHOP</button>
+      <button id="skin-toggle">SKINS</button>
+      <button id="rebirth-toggle">REBIRTH</button>
+      <button id="rank-toggle">RANK</button>
+    </div>
+
+    <div class="log" id="log-text">Start by training</div>
+    <div class="buffs" id="buffs"></div>
+    <div class="streak-row">
+      <span>Win streak <b id="win-streak">0</b></span>
+      <span>Lose streak <b class="lose" id="lose-streak">0</b></span>
+    </div>
+
+    <div class="stats">
+      <div class="frost-overlay" id="frost-overlay"></div>
+      <span id="stat-click">Click Power 1.00</span>
+      <span id="stat-idle">Per Sec 0.00</span>
+    </div>
+    <button id="restart-btn" class="restart-link">⟳ Restart</button>
+  </div>
+
+  <div class="panel side-panel" id="shop-panel">
+    <div class="panel-title">Shop — always open</div>
+    <div id="item-list"></div>
+  </div>
+
+  <div class="panel side-panel" id="skin-panel">
+    <div class="panel-title">Skins — unlock by stage or special conditions</div>
+    <div id="skin-list"></div>
+    <div class="panel-title" style="margin-top:16px;">Damage Font — floating number style</div>
+    <div id="font-list"></div>
+  </div>
+
+  <div class="panel side-panel" id="rebirth-panel">
+    <div class="panel-title">Rebirth — reset your run for permanent mastery</div>
+    <div class="rebirth-summary">
+      <div>Mastery Points <b id="mastery-points">0</b></div>
+      <div>Rebirths so far <b id="prestige-count">0</b></div>
+    </div>
+    <div id="tree-list"></div>
+    <button id="rebirth-btn">🔄 Rebirth Now</button>
+    <div class="rebirth-note" id="rebirth-note"></div>
+  </div>
+
+  <div class="panel side-panel" id="rank-panel">
+    <div class="panel-title">World Leaderboard — best stage reached before each Restart</div>
+    <div class="rank-note">Playing as <b id="rank-player-name">-</b> · <span id="rank-refresh-link">refresh</span></div>
+    <div id="rank-list">Loading...</div>
+  </div>
+
+  <div class="overlay" id="name-overlay">
+    <div class="result-card" id="name-card">
+      <div class="big">👤 Enter your name</div>
+      <div class="result-desc">This name will show on the shared World Leaderboard when you Restart. Anyone who opens this game can see it.</div>
+      <input id="name-input" maxlength="16" placeholder="Your name" style="width:100%; box-sizing:border-box; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:14px; margin:10px 0; text-align:center;">
+      <button id="name-confirm" style="width:100%; background:var(--ok); color:#06140d; border:none; padding:10px; border-radius:8px; font-weight:800;">Start Playing</button>
+    </div>
+  </div>
+
+  <div class="split-fx" id="split-fx">
+    <div class="split-half top"></div>
+    <div class="split-half bottom"></div>
+    <div class="slash"></div>
+  </div>
+
+  <div class="overlay" id="ending-overlay">
+    <div class="result-card ending-card" id="ending-card">
+      <div class="ending-title">CLIMB OR BUST</div>
+      <div class="ending-sub">— YOU MADE IT TO THE TOP —</div>
+      <div class="ending-stats" id="ending-stats"></div>
+      <div class="ending-thanks">Thanks for playing.<br>Made by an accountant learning to code.</div>
+      <button id="ending-close" style="width:100%; background:var(--accent); color:var(--btn-ink); border:none; padding:12px; border-radius:8px; font-weight:800;">Keep Climbing</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="summary-overlay">
+    <div class="result-card jackpot" id="summary-card">
+      <div class="big">🏁 Run Complete</div>
+      <div class="result-name" id="summary-rank">-</div>
+      <div class="result-desc" id="summary-stats">-</div>
+      <button id="summary-continue" style="width:100%; background:var(--ok); color:#06140d; border:none; padding:10px; border-radius:8px; font-weight:800;">Start New Run</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="gacha-overlay">
+    <div class="result-card" id="gacha-card">
+      <div class="big">🎁 Mystery Box</div>
+      <div class="result-name" id="gacha-result-name">-</div>
+      <div class="result-desc" id="gacha-result-desc">-</div>
+      <button id="gacha-close">OK</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="skin-overlay">
+    <div class="result-card jackpot" id="skin-card">
+      <div class="big">🎨 New Skin Unlocked!</div>
+      <div class="result-name" id="skin-result-name">-</div>
+      <div class="result-desc" id="skin-result-desc">-</div>
+      <button id="skin-close">OK</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="invasion-overlay">
+    <div class="result-card invasion-card">
+      <div class="big">⚠ INVASION BOSS!</div>
+      <div class="result-name" id="invasion-gimmick-name">-</div>
+      <div class="result-desc" id="invasion-gimmick-desc">-</div>
+      <div style="display:flex; gap:10px;">
+        <button id="invasion-accept" style="flex:1; background:var(--purple); color:#16101f; border:none; padding:10px; border-radius:8px; font-weight:800;">⚔ ACCEPT</button>
+        <button id="invasion-skip" style="flex:1; background:transparent; border:2px solid var(--ink-dim); color:var(--ink-dim); padding:10px; border-radius:8px; font-weight:800;">🏃 SKIP</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="confirm-overlay">
+    <div class="result-card" id="confirm-card">
+      <div class="big" id="confirm-title">-</div>
+      <div class="result-desc" id="confirm-desc">-</div>
+      <div style="display:flex; gap:10px;">
+        <button id="confirm-yes" style="flex:1; background:var(--ok); color:#06140d; border:none; padding:10px; border-radius:8px; font-weight:800;">Confirm</button>
+        <button id="confirm-no" style="flex:1; background:transparent; border:2px solid var(--ink-dim); color:var(--ink-dim); padding:10px; border-radius:8px; font-weight:800;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+  ===== CLIMB OR BUST — 4단계: 스킨(테마) 시스템 =====
+  해금 방식 3가지: 스테이지 도달 / 특정 조건(연승·연패) / 유료(아직 미구현, 잠김으로만 표시)
+*/
+
+const CONFIG = {
+  reqGrowth: 1.15,
+  powerGrowth: 1.10,
+  idleBootstrap: 0.3,
+  failPenaltyPct: 0.3,
+  goldPerClear: (stage) => Math.floor(8 + stage * 1.5)
+};
+
+/*
+  ===== 사운드 엔진 =====
+  외부 음원 없이 Web Audio API로 직접 합성. "미니멀하고 고급스러운 벨 톤" 컨셉이라
+  전부 sine/triangle 오실레이터 + 부드러운 엔벨로프(빠른 어택, 느린 릴리즈)만 사용.
+  브라우저 자동재생 정책 때문에 AudioContext는 첫 사용자 클릭에서 지연 생성함.
+*/
+let audioCtx = null;
+let soundOn = true;
+
+function ensureAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// 벨 톤 하나. freq(Hz), duration(초), peak(음량 0~1), type(파형), startOffset(초 뒤에 재생)
+function bell(freq, duration = 0.35, peak = 0.15, type = 'sine', startOffset = 0) {
+  if (!soundOn) return;
+  const ctx = ensureAudio();
+  const t0 = ctx.currentTime + startOffset;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(peak, t0 + 0.012);           // 빠른 어택
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration); // 부드러운 릴리즈
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.05);
+}
+
+// 여러 음을 순서대로 이어붙인 아르페지오
+function arpeggio(freqs, gap = 0.09, duration = 0.4, peak = 0.13, type = 'sine') {
+  freqs.forEach((f, i) => bell(f, duration, peak, type, i * gap));
+}
+
+const SFX = {
+  click()        { bell(720, 0.05, 0.05, 'sine'); },
+  denied()       { bell(160, 0.12, 0.06, 'triangle'); },
+  success()      { arpeggio([523.25, 659.25], 0.09, 0.35, 0.11); },              // C5 -> E5
+  bossClear()    { arpeggio([392.00, 523.25, 659.25, 784.00], 0.1, 0.5, 0.13); }, // G4-C5-E5-G5
+  fail()         { bell(180, 0.28, 0.09, 'triangle'); },
+  bossEnter()    { bell(98, 1.1, 0.14, 'sine'); bell(146.83, 1.0, 0.06, 'sine', 0.05); },   // 낮은 공명 + 배음
+  invasionEnter(){ bell(370.00, 0.5, 0.11, 'sine'); bell(311.13, 0.6, 0.09, 'sine', 0.08); },
+  purchase()     { bell(880, 0.08, 0.06, 'sine'); },
+  gacha(jackpot) {
+    if (jackpot) arpeggio([523.25, 659.25, 783.99, 1046.50], 0.08, 0.5, 0.13);
+    else arpeggio([440.00, 554.37, 659.25], 0.08, 0.35, 0.10);
+  },
+  skinUnlock()   { arpeggio([659.25, 783.99, 987.77], 0.11, 0.55, 0.12); },
+  rebirth()      { arpeggio([392.00, 493.88, 587.33, 739.99, 880.00], 0.1, 0.7, 0.13); }
+};
+
+// ===== 보스전 지속 앰비언트 드론 =====
+// 낮은 저음 2개(5도 간격) + 느린 트레몰로로 "무게감 있게 계속 깔리는" 소리를 만듦
+let bossDrone = null;
+
+function startBossDrone() {
+  if (!soundOn || bossDrone) return;
+  const ctx = ensureAudio();
+  const now = ctx.currentTime;
+
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const osc3 = ctx.createOscillator();
+  const lfo = ctx.createOscillator();
+  const lfoGain = ctx.createGain();
+  const mainGain = ctx.createGain();
+
+  osc1.type = 'triangle'; osc1.frequency.value = 110;          // A2 - 들리는 저음대
+  osc2.type = 'triangle'; osc2.frequency.value = 110 * 1.5;    // E3, 5도 위 - 두께감
+  osc2.detune.value = 6;                                        // 살짝 어긋나게 해서 은은한 맥놀이
+  osc3.type = 'sine'; osc3.frequency.value = 220;               // 한 옥타브 위 - 작은 스피커 가청 보강
+  lfo.type = 'sine'; lfo.frequency.value = 0.4;                  // 느린 맥동(무게감)
+  lfoGain.gain.value = 0.035;
+
+  mainGain.gain.setValueAtTime(0, now);
+  mainGain.gain.linearRampToValueAtTime(0.09, now + 0.6);        // 확실히 들리는 음량
+
+  const osc3Gain = ctx.createGain();
+  osc3Gain.gain.value = 0.35; // 3배음은 더 작게
+
+  lfo.connect(lfoGain).connect(mainGain.gain);
+  osc1.connect(mainGain);
+  osc2.connect(mainGain);
+  osc3.connect(osc3Gain).connect(mainGain);
+  mainGain.connect(ctx.destination);
+
+  osc1.start(); osc2.start(); osc3.start(); lfo.start();
+  bossDrone = { osc1, osc2, osc3, lfo, mainGain };
+}
+
+function stopBossDrone() {
+  if (!bossDrone) return;
+  const ctx = ensureAudio();
+  const now = ctx.currentTime;
+  const nodes = bossDrone;
+  nodes.mainGain.gain.cancelScheduledValues(now);
+  nodes.mainGain.gain.setValueAtTime(nodes.mainGain.gain.value, now);
+  nodes.mainGain.gain.linearRampToValueAtTime(0.0001, now + 0.5); // 부드럽게 페이드아웃
+  setTimeout(() => {
+    try { nodes.osc1.stop(); nodes.osc2.stop(); nodes.osc3.stop(); nodes.lfo.stop(); } catch (e) {}
+  }, 550);
+  bossDrone = null;
+}
+
+/*
+  ===== BGM 시퀀서 =====
+  외부 음원 없이 스텝 시퀀서로 루프를 합성. 평상시엔 잔잔한 앰비언트,
+  보스전엔 긴장감 있는 테마로 전환되며 보스 강도가 셀수록 템포가 빨라짐.
+*/
+let bgmTimer = null;
+let bgmStep = 0;
+let bgmMode = null; // 'base' | 'boss'
+
+// A단조 계열 — 기존 벨 톤 사운드와 어울리도록 구성
+const BGM_BASE = {
+  stepMs: 480,
+  bass:  [110.00, null, 82.41, null, 98.00, null, 87.31, null],           // A2 E2 G2 F2
+  lead:  [440.00, 659.25, null, 523.25, null, 587.33, null, 493.88],      // 잔잔한 아르페지오
+  leadVol: 0.045, bassVol: 0.05, leadType: 'sine'
+};
+const BGM_BOSS = {
+  stepMs: 260,
+  bass:  [73.42, 73.42, null, 73.42, 87.31, null, 82.41, null],            // D2 중심의 낮고 반복적인 리프
+  lead:  [293.66, null, 349.23, null, 311.13, null, 233.08, 246.94],       // 불안한 반음 진행
+  leadVol: 0.05, bassVol: 0.075, leadType: 'triangle'
+};
+
+function playBgmStep(track) {
+  const i = bgmStep % track.bass.length;
+  const b = track.bass[i];
+  const l = track.lead[i];
+  if (b) bell(b, track.stepMs / 1000 * 1.6, track.bassVol, 'triangle');
+  if (l) bell(l, track.stepMs / 1000 * 1.3, track.leadVol, track.leadType);
+  bgmStep += 1;
+}
+
+function startBgm(mode) {
+  if (!soundOn) return;
+  if (bgmMode === mode && bgmTimer) return;
+  stopBgm();
+  bgmMode = mode;
+  bgmStep = 0;
+  const track = mode === 'boss' ? BGM_BOSS : BGM_BASE;
+  // 보스가 셀수록 템포 상승 (강도 1.7이면 약 1.4배 빠름)
+  const speed = mode === 'boss' ? (1 + (getBossIntensity() - 1) * 0.6) : 1;
+  const interval = Math.max(120, track.stepMs / speed);
+  ensureAudio();
+  playBgmStep(track);
+  bgmTimer = setInterval(() => playBgmStep(track), interval);
+}
+
+function stopBgm() {
+  if (bgmTimer) clearInterval(bgmTimer);
+  bgmTimer = null;
+  bgmMode = null;
+}
+
+function refreshBgm() {
+  if (!soundOn) { stopBgm(); return; }
+  startBgm(state.bossActive || state.invasionActive ? 'boss' : 'base');
+}
+
+const state = {
+  stage: 1,
+  req: 20,
+  level: 0,
+  clickPower: 1,
+  idlePower: 0,
+  gold: 0,
+  spurtRemainMs: 0,
+  powerRemainMs: 0,
+  nextChanceBonus: 0,
+  confidenceUsedThisStage: false,
+  nextInsurance: null,
+  trainingBookCount: 0,
+  autoManualCount: 0,
+  winStreak: 0,
+  loseStreak: 0,
+  skin: 'base',
+  unlockedSkins: new Set(['base']),
+  isBursting: false,
+  burstSnapshot: 0,
+  bossActive: false,
+  bossGimmicks: [],
+  spikeUntil: 0,
+  nextSpikeAt: 0,
+  invasionActive: false,
+  invasionEndsAt: 0,
+  invasionGimmick: null,
+  invasionPending: false,
+  invasionCooldownUntil: 0,
+  masteryPoints: 0,
+  idleTreeLevel: 0,
+  clickTreeLevel: 0,
+  goldTreeLevel: 0,
+  critTreeLevel: 0,
+  prestigeCount: 0,
+  bestStage: 1,
+  totalPlaySeconds: 0,
+  itemsBought: 0,
+  totalClicks: 0,
+  bossesDefeated: 0,
+  hasFinished: false,
+  lastRunPoints: 0,
+  skillActive: false,
+  skillCombo: 0,
+  skillHits: 0,
+  skillTotal: 0,
+  nextSkillAt: 0,
+  currentPattern: null,
+  skillNet: 0,
+  skillMixSeed: 0,
+  lowChanceSince: 0,
+  playerName: '',
+  damageFont: 'default',
+  unlockedDamageFonts: new Set(['default'])
+};
+
+// ===== 스킨 정의 =====
+const SKINS = [
+  { key: 'base', name: 'Base', desc: 'Clean navy + gold', type: 'default',
+    preview: { a: '#0b0d12', b: '#ffdd33' } },
+  { key: 'constellation', name: 'Constellation', desc: 'Connect the stars across a starry sky', type: 'stage', requirement: 100,
+    preview: { a: '#050814', b: '#cde3ff' } },
+  { key: 'pcb', name: 'Circuit Board', desc: 'Components link up one by one to complete the circuit', type: 'stage', requirement: 250,
+    preview: { a: '#0d0f10', b: '#ff8a3d' } },
+  { key: 'blocks', name: 'Block Drop', desc: 'A world of colorful falling blocks — hardest to unlock', type: 'stage', requirement: 400,
+    preview: { a: '#101018', b: 'blocks' } },
+  { key: 'rainbow', name: 'Rainbow Awakening', desc: 'Reach stage 400+ and win 10 in a row — legendary tier', type: 'condition', check: () => state.stage >= 400 && state.winStreak >= 10,
+    preview: { a: '#0a0a12', b: 'rainbow' } }
+];
+
+function checkSkinUnlocks() {
+  SKINS.forEach((skin) => {
+    if (state.unlockedSkins.has(skin.key)) return;
+    let unlocked = false;
+    if (skin.type === 'stage' && state.stage >= skin.requirement) unlocked = true;
+    if (skin.type === 'condition' && skin.check()) unlocked = true;
+    if (unlocked) {
+      state.unlockedSkins.add(skin.key);
+      showSkinUnlock(skin);
+    }
+  });
+}
+
+function applySkin(key) {
+  document.body.className = key === 'base' ? '' : 'skin-' + key;
+  state.skin = key;
+}
+
+// ===== 데미지 폰트(해금형 코스메틱) — 획득(+)/손실(-) 숫자 모두에 적용됨 =====
+const DAMAGE_FONTS = [
+  { key: 'default', name: 'Default', desc: 'Standard bold numbers, green for gains / red for losses', cssClass: '', type: 'default' },
+  { key: 'impact', name: 'Impact', desc: 'Chunky comic-book style — reach stage 50', cssClass: 'skin-impact', type: 'stage', requirement: 50 },
+  { key: 'neon', name: 'Neon Blast', desc: 'Icy blue gains, hot pink losses — reach stage 75', cssClass: 'skin-neon', type: 'stage', requirement: 75 },
+  { key: 'royal', name: 'Royal Aurora', desc: 'Golden gains, violet losses — reach stage 130', cssClass: 'skin-royal', type: 'stage', requirement: 130 },
+  { key: 'zombie', name: 'Zombie', desc: 'Sickly green gains, decayed brown losses — reach stage 200', cssClass: 'skin-zombie', type: 'stage', requirement: 200 },
+  { key: 'cadena', name: 'Cadena', desc: 'Chained magenta glow — reach stage 300', cssClass: 'skin-cadena', type: 'stage', requirement: 300 }
+];
+
+function checkDamageFontUnlocks() {
+  DAMAGE_FONTS.forEach((f) => {
+    if (state.unlockedDamageFonts.has(f.key)) return;
+    if (f.type === 'stage' && state.stage >= f.requirement) {
+      state.unlockedDamageFonts.add(f.key);
+      showSkinUnlock({ name: f.name + ' Damage Font' });
+    }
+  });
+}
+
+// ===== 가챠 확률표 (합계 100) =====
+/*
+  영구 아이템(훈련 교본/자동화 매뉴얼)은 구매마다 가격이 2배로 뛰는데 박스는 가격이 고정이라,
+  고스테이지에서 박스가 일방적인 차익거래가 되어버림 → 박스 풀에서 제외하고
+  대신 스테이지에 비례하는 '골드 대박'을 넣어 잭팟의 재미는 유지하되 밸런스는 자기조정되게 함.
+*/
+const GACHA_TABLE = [
+  { key: 'miss',       weight: 22 },
+  { key: 'spurt',      weight: 22 },
+  { key: 'confidence', weight: 20 },
+  { key: 'power',      weight: 15 },
+  { key: 'fullIns',    weight: 8 },
+  { key: 'windfall',   weight: 13 }
+];
+
+function applyGachaResult(key) {
+  switch (key) {
+    case 'miss':
+      return { name: 'Nothing...', desc: 'Better luck next time', cls: 'miss' };
+    case 'spurt':
+      state.spurtRemainMs += 60000;
+      return { name: 'Boost obtained', desc: 'x2 EXP/sec for 60s', cls: '' };
+    case 'confidence':
+      state.nextChanceBonus = 0.10;
+      state.confidenceUsedThisStage = true;
+      return { name: 'Confidence Potion obtained', desc: '+10%p chance on next challenge', cls: '' };
+    case 'power':
+      state.powerRemainMs += 60000;
+      return { name: 'Power Boost obtained', desc: 'x4 EXP/sec for 60s', cls: '' };
+    case 'fullIns':
+      state.nextInsurance = 'full';
+      return { name: 'Full Insurance obtained!', desc: 'No penalty on your next failure', cls: 'jackpot' };
+    case 'windfall': {
+      const amount = Math.floor(CONFIG.goldPerClear(state.stage) * getGoldTreeMult() * 20);
+      state.gold += amount;
+      return { name: '🎉 GOLD WINDFALL!', desc: `+${fmt(amount)} gold`, cls: 'jackpot' };
+    }
+  }
+}
+
+function rollGacha() {
+  const total = GACHA_TABLE.reduce((s, r) => s + r.weight, 0);
+  let roll = Math.random() * total;
+  for (const row of GACHA_TABLE) {
+    if (roll < row.weight) return row.key;
+    roll -= row.weight;
+  }
+  return 'miss';
+}
+
+const ITEMS = {
+  training: {
+    name: 'Training Manual', desc: '+5% Click Power, permanent (repeatable)',
+    get cost() { return Math.floor(50 * Math.pow(2.0, state.trainingBookCount)); },
+    buy() { state.gold -= this.cost; state.clickPower *= 1.05; state.trainingBookCount += 1; }
+  },
+  auto: {
+    name: 'Automation Manual', desc: '+5% EXP/sec, permanent (repeatable)',
+    get cost() { return Math.floor(70 * Math.pow(2.0, state.autoManualCount)); },
+    buy() { state.gold -= this.cost; state.idlePower = state.idlePower > 0 ? state.idlePower * 1.05 : 0.3; state.autoManualCount += 1; }
+  },
+  confidence: {
+    name: 'Confidence Potion', desc: '+10%p chance on next challenge (one per stage, no stacking)', cost: 200,
+    singleUse: true,
+    buy() { state.gold -= this.cost; state.nextChanceBonus = 0.10; state.confidenceUsedThisStage = true; }
+  },
+  spurt: {
+    name: 'Boost', desc: 'x2 EXP/sec for 60s (waits if Power Boost is active)', cost: 120,
+    buy() { state.gold -= this.cost; state.spurtRemainMs += 60000; }
+  },
+  power: {
+    name: 'Power Boost', desc: 'x4 EXP/sec for 60s', cost: 350,
+    buy() { state.gold -= this.cost; state.powerRemainMs += 60000; }
+  },
+  fullIns: {
+    name: 'Full Insurance', desc: 'Completely negates the penalty on your next failure',
+    get cost() { return Math.floor(400 + Math.pow(state.stage, 1.55)); },
+    buy() { state.gold -= this.cost; state.nextInsurance = 'full'; }
+  },
+  gacha: {
+    name: '🎁 Mystery Box', desc: 'Randomly get one of the items above (20% chance of nothing)', isGacha: true,
+    // 내용물(특히 보험권)이 스테이지에 비례해 비싸지므로 박스도 같이 올려야
+    // 고스테이지에서 박스가 일방적인 차익거래가 되지 않음
+    get cost() { return Math.floor(350 + Math.pow(state.stage, 1.3)); },
+    buy() { state.gold -= this.cost; const key = rollGacha(); showGachaResult(applyGachaResult(key)); }
+  },
+  bossExit: {
+    name: '🚪 Boss Exit Ticket',
+    desc: 'Retreat to the previous stage with no EXP loss (boss fights only)',
+    bossOnly: true,
+    get cost() { return 1000 + state.stage * 5; },
+    buy() {
+      state.gold -= this.cost;
+      state.stage = Math.max(1, state.stage - 1);
+      state.req = state.req / CONFIG.reqGrowth;
+      state.confidenceUsedThisStage = false;
+      setupStage();
+      els.logText.textContent = '🚪 Retreated to the previous stage safely';
+      els.logText.className = 'log';
+    }
+  }
+};
+
+const els = {
+  stageNo: document.getElementById('stage-no'),
+  goldValue: document.getElementById('gold-value'),
+  levelValue: document.getElementById('level-value'),
+  floatLayer: document.getElementById('float-layer'),
+  reqSub: document.getElementById('req-sub'),
+  barFill: document.getElementById('bar-fill'),
+  barTrack: document.getElementById('bar-track'),
+  chanceText: document.getElementById('chance-text'),
+  ratioText: document.getElementById('ratio-text'),
+  growBtn: document.getElementById('grow-btn'),
+  challengeBtn: document.getElementById('challenge-btn'),
+  shopToggle: document.getElementById('shop-toggle'),
+  shopPanel: document.getElementById('shop-panel'),
+  itemList: document.getElementById('item-list'),
+  skinToggle: document.getElementById('skin-toggle'),
+  skinPanel: document.getElementById('skin-panel'),
+  skinList: document.getElementById('skin-list'),
+  fontList: document.getElementById('font-list'),
+  logText: document.getElementById('log-text'),
+  buffs: document.getElementById('buffs'),
+  winStreakEl: document.getElementById('win-streak'),
+  loseStreakEl: document.getElementById('lose-streak'),
+  statClick: document.getElementById('stat-click'),
+  statIdle: document.getElementById('stat-idle'),
+  panel: document.getElementById('panel'),
+  bossBanner: document.getElementById('boss-banner'),
+  debuffWindow: document.getElementById('debuff-window'),
+  emergencyRetreat: document.getElementById('emergency-retreat'),
+  frostOverlay: document.getElementById('frost-overlay'),
+  blockStack: document.getElementById('block-stack'),
+  pcbTrack: document.getElementById('pcb-track'),
+  pcbLineFill: document.getElementById('pcb-line-fill'),
+  pcbNodesEl: document.getElementById('pcb-nodes'),
+  starTrack: document.getElementById('star-track'),
+  starLineFill: document.getElementById('star-line-fill'),
+  starNodesEl: document.getElementById('star-nodes'),
+  rainbowArcWrap: document.getElementById('rainbow-arc-wrap'),
+  rainbowArcSvg: document.getElementById('rainbow-arc-svg'),
+  gachaOverlay: document.getElementById('gacha-overlay'),
+  gachaCard: document.getElementById('gacha-card'),
+  gachaResultName: document.getElementById('gacha-result-name'),
+  gachaResultDesc: document.getElementById('gacha-result-desc'),
+  gachaClose: document.getElementById('gacha-close'),
+  skinOverlay: document.getElementById('skin-overlay'),
+  skinResultName: document.getElementById('skin-result-name'),
+  skinResultDesc: document.getElementById('skin-result-desc'),
+  skinClose: document.getElementById('skin-close'),
+  invasionOverlay: document.getElementById('invasion-overlay'),
+  invasionGimmickName: document.getElementById('invasion-gimmick-name'),
+  invasionGimmickDesc: document.getElementById('invasion-gimmick-desc'),
+  invasionAccept: document.getElementById('invasion-accept'),
+  invasionSkip: document.getElementById('invasion-skip'),
+  restartBtn: document.getElementById('restart-btn'),
+  fxHeatEl: document.getElementById('fx-heat'),
+  skillOverlay: document.getElementById('skill-overlay'),
+  skillBanner: document.getElementById('skill-banner'),
+  skillWarning: document.getElementById('skill-warning'),
+  skillCountdown: document.getElementById('skill-countdown'),
+  skillPatternName: document.getElementById('skill-pattern-name'),
+  skillCombo: document.getElementById('skill-combo'),
+  skillResult: document.getElementById('skill-result'),
+  skillField: document.getElementById('skill-field'),
+  fxFrostEl: document.getElementById('fx-frost'),
+  rankToggle: document.getElementById('rank-toggle'),
+  rankPanel: document.getElementById('rank-panel'),
+  rankPlayerName: document.getElementById('rank-player-name'),
+  rankRefreshLink: document.getElementById('rank-refresh-link'),
+  rankList: document.getElementById('rank-list'),
+  nameOverlay: document.getElementById('name-overlay'),
+  nameInput: document.getElementById('name-input'),
+  nameConfirm: document.getElementById('name-confirm'),
+  summaryOverlay: document.getElementById('summary-overlay'),
+  summaryRank: document.getElementById('summary-rank'),
+  summaryStats: document.getElementById('summary-stats'),
+  summaryContinue: document.getElementById('summary-continue'),
+  endingOverlay: document.getElementById('ending-overlay'),
+  endingCard: document.getElementById('ending-card'),
+  splitFx: document.getElementById('split-fx'),
+  endingStats: document.getElementById('ending-stats'),
+  endingClose: document.getElementById('ending-close'),
+  muteToggle: document.getElementById('mute-toggle'),
+  rebirthToggle: document.getElementById('rebirth-toggle'),
+  rebirthPanel: document.getElementById('rebirth-panel'),
+  masteryPointsEl: document.getElementById('mastery-points'),
+  prestigeCountEl: document.getElementById('prestige-count'),
+  treeList: document.getElementById('tree-list'),
+  rebirthBtn: document.getElementById('rebirth-btn'),
+  rebirthNote: document.getElementById('rebirth-note'),
+  confirmOverlay: document.getElementById('confirm-overlay'),
+  confirmTitle: document.getElementById('confirm-title'),
+  confirmDesc: document.getElementById('confirm-desc'),
+  confirmYes: document.getElementById('confirm-yes'),
+  confirmNo: document.getElementById('confirm-no')
+};
+
+function showConfirm(title, desc, onConfirm) {
+  els.confirmTitle.textContent = title;
+  els.confirmDesc.textContent = desc;
+  els.confirmOverlay.classList.add('show');
+  els.confirmYes.onclick = () => { els.confirmOverlay.classList.remove('show'); onConfirm(); };
+  els.confirmNo.onclick = () => { els.confirmOverlay.classList.remove('show'); };
+}
+
+/*
+  ===== 환생(Rebirth) 시스템 =====
+  3개 트리(방치/클릭/골드)에 숙련도 포인트를 투자해 영구 배율을 얻음.
+  한 트리에 몰아주면 보스 기믹(클릭무효/방치무효)에서 반드시 한 번은 막히게 되어 있어서
+  자연스럽게 골고루 투자하게 만드는 구조.
+*/
+const REBIRTH_MIN_STAGE = 50;
+// 요구치가 스테이지마다 x1.15 복리로 커지므로, 환생 보상도 복리여야 따라잡을 수 있음
+// (선형 +10%/레벨이던 시절에는 아무리 환생해도 격차가 벌어져 최종 스테이지 도달이 불가능했음)
+const TREE_MULT_PER_LEVEL = 1.15;
+
+function getTreeMult(level) { return Math.pow(TREE_MULT_PER_LEVEL, level); }
+function getIdleTreeMult() { return getTreeMult(state.idleTreeLevel); }
+function getClickTreeMult() { return getTreeMult(state.clickTreeLevel); }
+function getGoldTreeMult() { return getTreeMult(state.goldTreeLevel); }
+function treeLevelCost(level) { return level + 1; } // 다음 레벨로 올리는 데 필요한 포인트
+
+const CRIT_CHANCE_PER_LEVEL = 0.01; // 레벨당 +1%p
+const CRIT_CHANCE_CAP = 0.5;        // 최대 50%
+const CRIT_MULT = 3;                // 치명타 시 획득량 ×3
+const BOSS_CRIT_CHANCE = 0.12;      // 드레인 중 보스가 치명타를 줄 확률
+const BOSS_CRIT_MULT = 2.5;
+
+// 상한에 도달한 뒤로는 레벨을 올려도 효과가 없으므로 구매 자체를 막아야 함(포인트 낭비 방지)
+const CRIT_MAX_LEVEL = Math.round(CRIT_CHANCE_CAP / CRIT_CHANCE_PER_LEVEL);
+function getCritChance() { return Math.min(CRIT_CHANCE_CAP, state.critTreeLevel * CRIT_CHANCE_PER_LEVEL); }
+function isTreeMaxed(key) { return key === 'crit' && state.critTreeLevel >= CRIT_MAX_LEVEL; }
+
+function getRebirthPoints() { return Math.floor(Math.pow(state.stage, 1.5) / 10); }
+function canRebirth() { return state.stage >= REBIRTH_MIN_STAGE; }
+
+function buyTreeLevel(key) {
+  if (isTreeMaxed(key)) return; // 상한 도달 트리는 더 이상 투자 불가
+  const field = key + 'TreeLevel';
+  const cost = treeLevelCost(state[field]);
+  if (state.masteryPoints < cost) return;
+  state.masteryPoints -= cost;
+  state[field] += 1;
+  render();
+}
+
+function doRebirth() {
+  if (!canRebirth()) return;
+  const gained = getRebirthPoints();
+  showConfirm(
+    '🔄 Rebirth?',
+    `You'll earn ${gained} mastery points and restart from Stage 1. Skins and mastery trees are kept.`,
+    () => {
+      stopBossDrone();
+      state.masteryPoints += gained;
+      state.prestigeCount += 1;
+
+      state.stage = 1; state.req = 20; state.level = 0; state.clickPower = 1; state.idlePower = 0; state.gold = 0;
+      state.spurtRemainMs = 0; state.powerRemainMs = 0; state.nextChanceBonus = 0; state.nextInsurance = null;
+      state.confidenceUsedThisStage = false;
+      state.trainingBookCount = 0; state.autoManualCount = 0; state.winStreak = 0; state.loseStreak = 0;
+      state.isBursting = false; state.burstSnapshot = 0;
+      state.bossActive = false; state.bossGimmicks = []; state.spikeUntil = 0; state.nextSpikeAt = 0;
+      state.invasionActive = false; state.invasionEndsAt = 0; state.invasionGimmick = null;
+      state.invasionPending = false; state.invasionCooldownUntil = 0;
+
+      els.logText.textContent = `✨ Rebirth #${state.prestigeCount}! +${gained} mastery points`;
+      els.logText.className = 'log success';
+      SFX.rebirth();
+      setupStage();
+      render();
+      saveGame();
+    }
+  );
+}
+
+function isPowerActive() { return state.powerRemainMs > 0; }
+function isSpurtActive() { return state.spurtRemainMs > 0; }
+function getBuffMult() { if (isPowerActive()) return 4; if (isSpurtActive()) return 2; return 1; }
+
+// 보스전이든 난입보스전이든, 지금 걸려있는 기믹인지 한 번에 체크
+function isGimmickActive(key) {
+  if (state.bossActive && state.bossGimmicks.includes(key)) return true;
+  if (state.invasionActive && state.invasionGimmick === key) return true;
+  return false;
+}
+function getActiveGimmicks() {
+  if (state.bossActive) return state.bossGimmicks;
+  if (state.invasionActive) return [state.invasionGimmick];
+  return [];
+}
+
+function getIdlePerSec() {
+  if (isGimmickActive('idleNull')) return 0; // 방치 무효형
+  return state.idlePower * getBuffMult() * getIdleTreeMult();
+}
+
+/*
+  ===== 보스 시스템 (재설계) =====
+  50스테이지 단위로 보스가 등장. "확률을 깎는" 방식 대신, 모든 압박 기믹을
+  경험치 자체를 갉아먹는 방식으로 통일해서 나머지 게임 시스템(level vs req)과
+  같은 언어로 동작하게 만듦 — 획득 속도가 손실 속도보다 빠르면 극복하는 구조.
+*/
+const BOSS_INTERVAL = 50;
+const FINAL_STAGE = 400; // 이 스테이지를 클리어하면 엔딩 (보스 8차)
+const DRAIN_RATE = 0.02;      // 초당 req의 2%. 스킬 시퀀스 중에는 멈추므로 실효 드레인은 주기당 30% 안팎
+const SPIKE_MULT = 6;         // 스파이크 중 요구치 배율
+const SPIKE_DURATION_MS = 3000;
+
+/*
+  보스마다 기믹이 하나씩 누적되는 고정 사다리.
+  주의: clickNull과 idleNull은 동시에 걸리면 경험치 획득 수단이 완전히 사라져 소프트락이 되므로
+  절대 함께 배정하지 않고, 5차부터 둘 중 하나만 무작위로 붙임.
+  6~8차는 기믹을 더 얹는 대신 강도(getBossIntensity)를 단계적으로 올려서 압박함.
+*/
+function getBossGimmicksForStage(stage) {
+  const idx = stage / BOSS_INTERVAL; // 1차, 2차, ...
+  const ladder = ['drain', 'hidden', 'spike'];
+  // 스킬 패링은 1차 보스부터 모든 보스가 공통으로 보유 (액션 파트)
+  const gimmicks = ['skill', ...ladder.slice(0, Math.min(ladder.length, idx))];
+  if (idx >= 5) gimmicks.push(Math.random() < 0.5 ? 'clickNull' : 'idleNull');
+  return gimmicks;
+}
+
+// 5차 이후로는 기믹 수 대신 강도를 올림
+function getBossIntensity() {
+  if (!state.bossActive) return 1;
+  const idx = state.stage / BOSS_INTERVAL;
+  if (idx >= 8) return 1.7;
+  if (idx >= 7) return 1.5;
+  if (idx >= 6) return 1.3;
+  if (idx >= 5) return 1.15;
+  return 1;
+}
+
+function setupStage() {
+  const wasBoss = state.bossActive;
+  state.bossActive = state.stage % BOSS_INTERVAL === 0;
+  if (state.bossActive) {
+    state.bossGimmicks = getBossGimmicksForStage(state.stage);
+    state.spikeUntil = 0;
+    state.nextSpikeAt = state.bossGimmicks.includes('spike') ? Date.now() + 4000 + Math.random() * 6000 : 0;
+    state.nextSkillAt = Date.now() + 8000;
+    endSkillSequence(true);
+    if (!wasBoss) { triggerEntrance(false); startBossDrone(); refreshBgm(); }
+  } else {
+    state.bossGimmicks = [];
+    state.nextSkillAt = 0;
+    endSkillSequence(true);
+    if (wasBoss) { stopBossDrone(); refreshBgm(); }
+  }
+}
+
+function triggerEntrance(isInvasion) {
+  els.panel.classList.remove('boss-entrance');
+  void els.panel.offsetWidth;
+  els.panel.classList.add('boss-entrance');
+  els.bossBanner.textContent = isInvasion ? '⚠ INVASION!' : '⚠ BOSS';
+  els.bossBanner.classList.toggle('invasion', isInvasion);
+
+  // 화면 전체 플래시로 임팩트를 크게
+  const flash = document.createElement('div');
+  flash.className = 'boss-flash' + (isInvasion ? ' invasion' : '');
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 500);
+
+  if (isInvasion) SFX.invasionEnter(); else SFX.bossEnter();
+}
+
+function isSpikeActive() {
+  return state.bossActive && state.bossGimmicks.includes('spike') && Date.now() < state.spikeUntil;
+}
+
+function getEffectiveReq() {
+  let mult = 1;
+  if (isSpikeActive()) mult = Math.max(mult, SPIKE_MULT);
+  return state.req * mult;
+}
+
+function getChance() {
+  const base = Math.min(0.95, state.level / getEffectiveReq()) + state.nextChanceBonus;
+  return Math.min(0.95, base);
+}
+const NUM_SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+function fmt(n) {
+  if (!isFinite(n)) return '∞';
+  if (n < 1000) return n.toFixed(n < 10 ? 2 : 1);
+  let tier = Math.min(NUM_SUFFIXES.length - 1, Math.floor(Math.log10(n) / 3));
+  if (tier >= NUM_SUFFIXES.length - 1 && n >= Math.pow(1000, NUM_SUFFIXES.length)) {
+    return n.toExponential(2); // 그 이상은 접미사 대신 지수 표기로 폴백
+  }
+  let scaled = n / Math.pow(1000, tier);
+  if (scaled >= 999.995 && tier < NUM_SUFFIXES.length - 1) { // 반올림 경계에서 다음 단위로 자연스럽게 넘어감
+    tier += 1;
+    scaled = n / Math.pow(1000, tier);
+  }
+  return scaled.toFixed(2) + NUM_SUFFIXES[tier];
+}
+
+function fmtDuration(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function showEndingCredits() {
+  const masteryTotal = state.idleTreeLevel + state.clickTreeLevel + state.goldTreeLevel + state.critTreeLevel;
+  els.endingStats.innerHTML = `
+    <div class="row"><span>Cleared in</span><b>${fmtDuration(state.totalPlaySeconds)}</b></div>
+    <div class="row"><span>Rebirths</span><b>${state.prestigeCount}</b></div>
+    <div class="row"><span>Items bought</span><b>${state.itemsBought}</b></div>
+    <div class="row"><span>Total clicks</span><b>${state.totalClicks.toLocaleString()}</b></div>
+    <div class="row"><span>Bosses defeated</span><b>${state.bossesDefeated}</b></div>
+    <div class="row"><span>Mastery levels</span><b>${masteryTotal}</b></div>
+    <div class="row"><span>Final stage</span><b>${FINAL_STAGE}</b></div>
+  `;
+  [...els.endingStats.children].forEach((row, i) => { row.style.animationDelay = (0.55 + i * 0.09) + 's'; });
+
+  els.endingOverlay.classList.remove('show', 'impact');
+  els.endingCard.classList.remove('slam');
+  els.splitFx.classList.remove('run');
+  void els.splitFx.offsetWidth; // 리플로우 강제 — 애니메이션 재시작 보장
+
+  // 1) 화면을 가르는 섬광 → 위아래로 쪼개짐
+  els.splitFx.classList.add('run');
+  bell(1800, 0.12, 0.09, 'triangle');
+  bell(900, 0.2, 0.07, 'sine', 0.02);
+
+  // 2) 카드가 내려꽂히며 화면 충격
+  setTimeout(() => {
+    els.endingOverlay.classList.add('show');
+    els.endingCard.classList.add('slam');
+    setTimeout(() => {
+      els.endingOverlay.classList.add('impact');
+      bell(70, 0.5, 0.16, 'triangle');
+      bell(140, 0.35, 0.09, 'sine', 0.01);
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => bell(f, 0.6, 0.11, 'sine', 0.25 + i * 0.09));
+    }, 380);
+  }, 780);
+
+  saveGame();
+}
+els.endingClose.addEventListener('click', () => {
+  els.endingOverlay.classList.remove('show', 'impact');
+  els.splitFx.classList.remove('run');
+  render();
+});
+
+/*
+  ===== 보스 스킬 패링 (리듬 액션) =====
+  보스전 중 주기적으로 스킬을 예고하고, 줄어드는 링이 타겟에 맞는 순간 클릭해 막아냄.
+  오버레이가 패널을 덮으므로 TRAIN/CHALLENGE 오클릭이 원천 차단됨.
+  성공 보상은 크고 실패 손실은 작게 — "잘하면 이득"이 되도록 설계(방해 기믹의 실패를 반복하지 않기 위함).
+*/
+const SKILL_INTERVAL_MS = 24000;
+
+/*
+  보스별 리듬 패턴 — 타수, 속도 곡선, 간격, 크기가 전부 다름.
+  dur(i,n)은 i번째 링이 줄어드는 시간(ms), gap(i,n)은 다음 타격까지의 간격(ms).
+  같은 시퀀스 안에서도 링마다 속도가 달라지도록 설계해 단조로움을 없앰.
+*/
+/*
+  난이도 티어별 패턴 "풀". 같은 보스라도 스킬을 쓸 때마다 풀에서 다른 패턴을 뽑으므로
+  반복 플레이에도 매번 다른 리듬이 나옴. 같은 티어 안의 패턴들은 난이도는 비슷하되 결이 다름.
+  dur(i,n)=i번째 링이 줄어드는 시간(ms), gap(i,n)=다음 타격까지의 간격(ms).
+*/
+const PATTERN_TIERS = [
+  [ // 티어1 (보스 1~2차) — 기본기. 클릭으로 감을 익힘
+    { name: 'STEADY',  beats: 4, size: 56, input: 'click', dur: () => 1250, gap: () => 420 },
+    { name: 'PULSE',   beats: 4, size: 56, input: 'click', dur: (i) => (i % 2 ? 1450 : 1050), gap: () => 400 },
+    { name: 'KEYS',    beats: 4, size: 56, input: 'key',   dur: () => 1300, gap: () => 440 }
+  ],
+  [ // 티어2 (3~4차) — 리듬 변주 + 키보드 도입
+    { name: 'ACCEL',     beats: 5, size: 52, input: 'mixed', dur: (i, n) => 1300 - (i / (n - 1)) * 550, gap: () => 380 },
+    { name: 'SYNCOPATE', beats: 6, size: 52, input: 'mixed', dur: (i) => (i % 2 === 0 ? 1150 : 620), gap: (i) => (i % 2 === 0 ? 300 : 460) },
+    { name: 'BURST',     beats: 6, size: 50, input: 'mixed', dur: () => 820, gap: (i) => (i % 2 ? 620 : 200) }
+  ],
+  [ // 티어3 (5~6차) — 정밀도와 속도, 혼합 입력 본격화
+    { name: 'PRECISION', beats: 6, size: 40, input: 'mixed', dur: () => 720, gap: () => 330 },
+    { name: 'CHAOS',     beats: 7, size: 46, input: 'mixed', dur: () => 520 + Math.random() * 900, gap: () => 200 + Math.random() * 420 },
+    { name: 'RIPTIDE',   beats: 7, size: 44, input: 'mixed', dur: (i) => (i < 3 ? 1000 : 560), gap: (i) => (i < 3 ? 420 : 200) }
+  ],
+  [ // 티어4 (7~8차) — 최종 난이도
+    { name: 'FRENZY',  beats: 8, size: 38, input: 'mixed', dur: (i, n) => 900 - (i / (n - 1)) * 400, gap: () => 240 },
+    { name: 'FINALE',  beats: 9, size: 36, input: 'mixed', dur: (i) => (i % 3 === 0 ? 900 : 480 + Math.random() * 260), gap: (i) => (i % 3 === 2 ? 520 : 170) },
+    { name: 'TEMPEST', beats: 9, size: 36, input: 'key',   dur: () => 420 + Math.random() * 480, gap: () => 150 + Math.random() * 300 }
+  ]
+];
+
+const SKILL_KEYS = ['W', 'A', 'S', 'D'];
+const KEY_ARROWS = { W: '↑', A: '←', S: '↓', D: '→' };
+
+// 스킬을 쓸 때마다 호출 — 같은 티어 안에서 직전과 다른 패턴을 뽑음
+function rollSkillPattern() {
+  const idx = Math.max(1, Math.round(state.stage / BOSS_INTERVAL));
+  const tier = PATTERN_TIERS[Math.min(PATTERN_TIERS.length - 1, Math.floor((idx - 1) / 2))];
+  let pick = tier[Math.floor(Math.random() * tier.length)];
+  if (tier.length > 1 && state.currentPattern && pick.name === state.currentPattern.name) {
+    const others = tier.filter((p) => p.name !== pick.name);
+    pick = others[Math.floor(Math.random() * others.length)];
+  }
+  state.currentPattern = pick;
+  return pick;
+}
+function getSkillPattern() {
+  return state.currentPattern || PATTERN_TIERS[0][0];
+}
+
+let activeBeat = null; // 현재 입력을 기다리는 타격 (키보드 판정용)
+
+// 타겟 생성 영역을 '경험치 숫자 아래 ~ TRAIN 버튼 위'로 맞춤
+function positionSkillField() {
+  const panelRect = els.panel.getBoundingClientRect();
+  const topRect = els.levelValue.getBoundingClientRect();
+  const botRect = els.growBtn.getBoundingClientRect();
+  const top = topRect.bottom - panelRect.top + 6;
+  const bottom = botRect.top - panelRect.top - 6;
+  els.skillField.style.top = Math.max(8, top) + 'px';
+  els.skillField.style.height = Math.max(90, bottom - top) + 'px';
+}
+
+function endSkillSequence(silent) {
+  state.skillActive = false;
+  activeBeat = null;
+  els.skillWarning.style.display = 'none';
+  els.skillBanner.style.display = 'block';
+  els.skillOverlay.querySelectorAll('.skill-target, .skill-judge, .ring-shard').forEach((n) => n.remove());
+
+  if (silent || state.skillTotal === 0) {
+    els.skillOverlay.classList.remove('show');
+    els.skillResult.classList.remove('show');
+    state.skillCombo = 0; state.skillHits = 0; state.skillTotal = 0; state.skillNet = 0;
+    render();
+    return;
+  }
+
+  const hits = state.skillHits, total = state.skillTotal;
+  const ratio = hits / total;
+  let headline, cls;
+
+  if (ratio >= 1) {
+    const bonus = state.req * 0.15;
+    state.level += bonus;
+    state.skillNet += bonus;
+    headline = 'PERFECT PARRY!';
+    cls = 'perfect';
+    SFX.bossClear();
+  } else if (ratio > 0) {
+    headline = `PARRIED ${hits} / ${total}`;
+    cls = ratio >= 0.6 ? 'good' : 'poor';
+  } else {
+    headline = 'SKILL HIT YOU HEAD-ON';
+    cls = 'poor';
+  }
+
+  // 오버레이가 닫히기 전에 이번 시퀀스의 순획득량을 보여줌
+  const net = state.skillNet;
+  els.skillResult.className = 'skill-result show ' + cls;
+  els.skillResult.innerHTML =
+    `<div class="sr-head">${headline}</div>` +
+    `<div class="sr-net">${net >= 0 ? '+' : '-'}${fmt(Math.abs(net))} EXP</div>` +
+    `<div class="sr-sub">${hits}/${total} blocked</div>`;
+
+  els.logText.textContent = `⚡ ${headline} · ${net >= 0 ? '+' : '-'}${fmt(Math.abs(net))} EXP`;
+  els.logText.className = 'log ' + (net >= 0 ? 'success' : 'fail');
+
+  state.skillCombo = 0; state.skillHits = 0; state.skillTotal = 0; state.skillNet = 0;
+  render();
+
+  setTimeout(() => {
+    els.skillResult.classList.remove('show');
+    els.skillOverlay.classList.remove('show');
+  }, 1600);
+}
+
+function showJudge(x, y, text, cls) {
+  const j = document.createElement('div');
+  j.className = 'skill-judge ' + cls;
+  j.textContent = text;
+  j.style.left = x + 'px';
+  j.style.top = y + 'px';
+  els.skillOverlay.appendChild(j);
+  setTimeout(() => j.remove(), 700);
+}
+
+// 패링 성공 시 링이 유리처럼 깨지는 연출 + 쨍그랑 사운드
+function shatterRing(x, y, size, isPerfect) {
+  const shardCount = isPerfect ? 12 : 8;
+  for (let i = 0; i < shardCount; i++) {
+    const shard = document.createElement('div');
+    shard.className = 'ring-shard' + (isPerfect ? ' perfect' : '');
+    const angle = (360 / shardCount) * i + (Math.random() * 20 - 10);
+    const dist = size * (0.7 + Math.random() * 0.8);
+    shard.style.left = x + 'px';
+    shard.style.top = y + 'px';
+    shard.style.setProperty('--dx', Math.cos(angle * Math.PI / 180) * dist + 'px');
+    shard.style.setProperty('--dy', Math.sin(angle * Math.PI / 180) * dist + 'px');
+    shard.style.setProperty('--rot', (Math.random() * 540 - 270) + 'deg');
+    els.skillOverlay.appendChild(shard);
+    setTimeout(() => shard.remove(), 600);
+  }
+  // 유리 깨지는 소리 — 고음 여러 개를 아주 짧게 흩뿌림
+  const base = isPerfect ? 2400 : 1800;
+  for (let i = 0; i < (isPerfect ? 5 : 3); i++) {
+    bell(base + Math.random() * 1400, 0.05 + Math.random() * 0.06, 0.05, 'triangle', i * 0.012);
+  }
+  bell(base * 0.5, 0.18, 0.06, 'sine', 0.02);
+}
+
+function spawnSkillBeat(index, total) {
+  if (!state.skillActive) return;
+  const pat = getSkillPattern();
+  const size = pat.size;
+  const pad = size / 2 + 6;
+  const fieldW = els.skillField.offsetWidth;
+  const fieldH = els.skillField.offsetHeight;
+  const fieldLeft = els.skillField.offsetLeft;
+  const fieldTop = els.skillField.offsetTop;
+  const x = fieldLeft + pad + Math.random() * Math.max(1, fieldW - pad * 2);
+  const y = fieldTop + pad + Math.random() * Math.max(1, fieldH - pad * 2);
+  const dur = Math.max(340, pat.dur(index, total) / getBossIntensity());
+
+  // 이 타격의 입력 방식 결정.
+  // mixed는 무작위로만 뽑으면 우연히 전부 클릭인 시퀀스가 나올 수 있어,
+  // 홀짝으로 번갈아 가되 시작 손을 무작위로 정해 한 시퀀스 안에서 반드시 섞이게 함.
+  let mode = pat.input;
+  if (pat.input === 'mixed') {
+    const flip = (index + state.skillMixSeed) % 2 === 0;
+    mode = flip ? 'click' : 'key';
+    if (Math.random() < 0.25) mode = mode === 'click' ? 'key' : 'click'; // 가끔 흐름을 깨서 예측 방지
+  }
+  const wantKey = mode === 'key' ? SKILL_KEYS[Math.floor(Math.random() * SKILL_KEYS.length)] : null;
+
+  const target = document.createElement('div');
+  target.className = 'skill-target' + (mode === 'key' ? ' key-mode' : '');
+  target.style.left = x + 'px';
+  target.style.top = y + 'px';
+  target.style.width = size + 'px';
+  target.style.height = size + 'px';
+  target.style.margin = `${-size / 2}px 0 0 ${-size / 2}px`;
+  if (wantKey) {
+    const label = document.createElement('span');
+    label.className = 'key-label';
+    label.textContent = KEY_ARROWS[wantKey];
+    target.appendChild(label);
+  }
+  const ring = document.createElement('div');
+  ring.className = 'skill-ring';
+  ring.style.animationDuration = dur + 'ms';
+  target.appendChild(ring);
+  els.skillOverlay.appendChild(target);
+
+  const startedAt = Date.now();
+  let resolved = false;
+
+  const finish = (hit, label, cls) => {
+    if (resolved) return;
+    resolved = true;
+    activeBeat = null;
+    if (hit) shatterRing(x, y, size, cls === 'perfect');
+    target.remove();
+    showJudge(x, y, label, cls);
+    if (hit) {
+      state.skillHits += 1;
+      state.skillCombo += 1;
+      const gain = state.req * (cls === 'perfect' ? 0.04 : 0.015) * (1 + state.skillCombo * 0.07);
+      state.level += gain;
+      state.skillNet += gain;
+      spawnFloat(gain, true, cls === 'perfect');
+    } else {
+      state.skillCombo = 0;
+      // 요구치 기준으로 손실을 잡아야 보유 경험치가 적을 때도 실패가 제대로 아픔
+      const loss = Math.min(state.level, Math.max(state.level * 0.18, state.req * 0.10));
+      state.level = Math.max(0, state.level - loss);
+      state.skillNet -= loss;
+      spawnFloat(loss, false);
+      SFX.fail();
+    }
+    els.skillCombo.textContent = state.skillCombo > 1 ? `${state.skillCombo} COMBO` : '';
+    render();
+    if (index + 1 < total) setTimeout(() => spawnSkillBeat(index + 1, total), pat.gap(index, total));
+    else setTimeout(() => endSkillSequence(false), 500);
+  };
+
+  const judge = () => {
+    const p = (Date.now() - startedAt) / dur;
+    if (p >= 0.93) finish(true, 'PERFECT', 'perfect');
+    else if (p >= 0.84) finish(true, 'GOOD', 'good');
+    else finish(false, 'TOO EARLY', 'miss');
+  };
+
+  activeBeat = { mode, wantKey, judge, finish };
+
+  target.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (mode === 'key') finish(false, 'USE THE KEY!', 'miss'); // 키 타격을 클릭하면 실패
+    else judge();
+  });
+
+  setTimeout(() => finish(false, 'MISS', 'miss'), dur + 140);
+}
+
+// 키보드 입력 판정 — 스킬 진행 중에만 동작
+window.addEventListener('keydown', (e) => {
+  if (!state.skillActive || !activeBeat) return;
+  const k = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+  const pressed = ({ ArrowUp: 'W', ArrowLeft: 'A', ArrowDown: 'S', ArrowRight: 'D' })[k] || k;
+  if (!SKILL_KEYS.includes(pressed)) return;
+  e.preventDefault();
+  if (activeBeat.mode !== 'key') {
+    activeBeat.finish(false, 'CLICK IT!', 'miss'); // 클릭 타격에 키를 누르면 실패
+  } else if (pressed === activeBeat.wantKey) {
+    activeBeat.judge();
+  } else {
+    activeBeat.finish(false, 'WRONG KEY', 'miss');
+  }
+});
+
+function startSkillSequence() {
+  if (state.skillActive || !state.bossActive) return;
+  const pat = rollSkillPattern(); // 매 시전마다 다른 패턴
+  state.skillActive = true;
+  state.skillCombo = 0; state.skillHits = 0; state.skillNet = 0;
+  state.skillMixSeed = Math.floor(Math.random() * 2);
+  state.skillTotal = pat.beats;
+  els.skillCombo.textContent = '';
+  els.skillBanner.textContent = `⚡ ${pat.name} — ${pat.beats} HITS`;
+  els.skillBanner.style.display = 'none';
+  const modeLabel = pat.input === 'key' ? 'WASD / ARROWS'
+    : (pat.input === 'mixed' ? 'CLICK + WASD' : 'CLICK');
+  els.skillPatternName.textContent = `${pat.name} · ${pat.beats} HITS · ${modeLabel}`;
+  els.skillWarning.style.display = 'flex';
+  els.skillOverlay.classList.add('show');
+  positionSkillField();
+
+  els.logText.textContent = '⚠ The boss is casting a skill — get ready to parry!';
+  els.logText.className = 'log fail';
+
+  // 화면 전체 붉은 플래시 + 경보음으로 확실하게 예고
+  const flash = document.createElement('div');
+  flash.className = 'boss-flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 500);
+  SFX.invasionEnter();
+
+  // 3-2-1 카운트다운 후 첫 타격 시작
+  let count = 3;
+  els.skillCountdown.textContent = count;
+  const timer = setInterval(() => {
+    count -= 1;
+    if (!state.skillActive) { clearInterval(timer); return; }
+    if (count > 0) {
+      els.skillCountdown.textContent = count;
+      bell(660, 0.12, 0.08, 'sine');
+    } else {
+      clearInterval(timer);
+      els.skillCountdown.textContent = 'PARRY!';
+      bell(880, 0.2, 0.11, 'sine');
+      setTimeout(() => {
+        if (!state.skillActive) return;
+        els.skillWarning.style.display = 'none';
+        els.skillBanner.style.display = 'block';
+        spawnSkillBeat(0, state.skillTotal);
+      }, 450);
+    }
+  }, 700);
+}
+
+function spawnFloat(amount, isGain, isCrit) {
+  if (!amount || amount <= 0) return;
+  const span = document.createElement('span');
+  const font = DAMAGE_FONTS.find((f) => f.key === state.damageFont) || DAMAGE_FONTS[0];
+  span.className = 'float-num ' + (isGain ? 'gain' : 'loss') + (font.cssClass ? ' ' + font.cssClass : '') + (isCrit ? ' crit' : '');
+  span.textContent = (isGain ? '+' : '-') + fmt(amount) + (isCrit ? ' CRIT!' : '');
+  // 획득(+)은 오른쪽, 손실(-)은 왼쪽으로 분리 — 동시에 떠도 서로 가리지 않게
+  span.style.left = isGain
+    ? (68 + Math.random() * 14) + '%'
+    : (18 + Math.random() * 14) + '%';
+  span.style.setProperty('--drift', (Math.random() * 16 - 8).toFixed(0) + 'px');
+  els.floatLayer.appendChild(span);
+  setTimeout(() => span.remove(), isCrit ? 1200 : 1050);
+}
+
+const BLOCK_COLORS = ['#ffcc00', '#00e5ff', '#a855f7', '#35e0a1', '#ff6ec7'];
+const RAINBOW_COLORS = ['#ff4d4d', '#ff9f40', '#ffe066', '#4ade80', '#4fa8ff', '#7c6cff', '#c084fc'];
+const blockSlots = [];
+const pcbNodes = [];
+const starSlots = [];
+const rainbowBands = []; // { el, length }
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function initRainbowArc() {
+  RAINBOW_COLORS.forEach((color, i) => {
+    const rx = 180 - i * 13;
+    const ry = 85 - i * 10;
+    const startX = 200 - rx;
+    const endX = 200 + rx;
+    const d = `M ${startX} 100 A ${rx} ${ry} 0 0 1 ${endX} 100`;
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('class', 'rainbow-band');
+    path.setAttribute('stroke', color);
+    path.style.color = color; // currentColor 참조용 (버스트 시 glow 색상)
+    els.rainbowArcSvg.appendChild(path);
+    const length = path.getTotalLength();
+    path.style.strokeDasharray = length;
+    path.style.strokeDashoffset = length;
+    rainbowBands.push({ el: path, length });
+  });
+}
+function initProgressGimmicks() {
+  for (let i = 0; i < 10; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'block-slot';
+    slot.style.setProperty('--i', i);
+    const stud = document.createElement('div');
+    stud.className = 'block-stud';
+    slot.appendChild(stud);
+    els.blockStack.appendChild(slot);
+    blockSlots.push(slot);
+
+    const node = document.createElement('div');
+    node.className = 'pcb-node';
+    els.pcbNodesEl.appendChild(node);
+    pcbNodes.push(node);
+
+    const star = document.createElement('div');
+    star.className = 'star-slot';
+    star.style.setProperty('--i', i);
+    els.starNodesEl.appendChild(star);
+    starSlots.push(star);
+  }
+}
+initProgressGimmicks();
+
+const heatBlobs = [];
+const frostBlobs = [];
+const BLOB_COUNT = 14;
+function initFxWalls() {
+  for (let i = 0; i < BLOB_COUNT; i++) {
+    const heat = document.createElement('div');
+    heat.className = 'fx-blob';
+    heat.dataset.baseW = (16 + Math.random() * 10).toFixed(1);
+    heat.dataset.baseH = (22 + Math.random() * 18).toFixed(1);
+    heat.style.animationDuration = (1.1 + Math.random() * 0.7).toFixed(2) + 's';
+    heat.style.animationDelay = (Math.random() * 1.2).toFixed(2) + 's';
+    els.fxHeatEl.appendChild(heat);
+    heatBlobs.push(heat);
+
+    const frost = document.createElement('div');
+    frost.className = 'fx-blob';
+    frost.dataset.baseW = (16 + Math.random() * 10).toFixed(1);
+    frost.dataset.baseH = (18 + Math.random() * 14).toFixed(1);
+    frost.style.animationDuration = (1.8 + Math.random() * 1).toFixed(2) + 's';
+    frost.style.animationDelay = (Math.random() * 2).toFixed(2) + 's';
+    els.fxFrostEl.appendChild(frost);
+    frostBlobs.push(frost);
+  }
+}
+initFxWalls();
+
+// 불꽃/서리에 유기적 흔들림을 주는 노이즈 플리커 (SVG feTurbulence의 baseFrequency를 미세하게 흔듦)
+const fireTurbNoise = document.getElementById('fire-turb-noise');
+const frostTurbNoise = document.getElementById('frost-turb-noise');
+setInterval(() => {
+  const fx = (0.02 + Math.random() * 0.015).toFixed(4);
+  const fy = (0.07 + Math.random() * 0.03).toFixed(4);
+  fireTurbNoise.setAttribute('baseFrequency', `${fx} ${fy}`);
+  const gx = (0.025 + Math.random() * 0.012).toFixed(4);
+  const gy = (0.04 + Math.random() * 0.02).toFixed(4);
+  frostTurbNoise.setAttribute('baseFrequency', `${gx} ${gy}`);
+}, 130);
+initRainbowArc();
+
+function renderProgressGimmick() {
+  // 숨김 기믹 중에는 진행률을 드러내는 모든 시각 요소를 0으로 고정해야 함
+  // (이걸 빼먹으면 경험치 바를 가려도 PCB 노드/별자리/블록/무지개로 진행도가 그대로 읽힘)
+  const hidden = isGimmickActive('hidden');
+  const ratio = hidden ? 0 : (state.isBursting ? state.burstSnapshot : Math.min(1, state.level / getEffectiveReq()));
+  const filledCount = Math.round(ratio * 10);
+
+  blockSlots.forEach((slot, i) => {
+    const stud = slot.querySelector('.block-stud');
+    if (i < filledCount) {
+      const color = BLOCK_COLORS[i % BLOCK_COLORS.length];
+      slot.classList.add('filled'); slot.style.background = color;
+      stud.style.background = color;
+    } else {
+      slot.classList.remove('filled'); slot.style.background = '';
+      stud.style.background = '';
+    }
+  });
+  els.blockStack.classList.toggle('burst', state.isBursting);
+
+  pcbNodes.forEach((node, i) => node.classList.toggle('lit', i < filledCount));
+  els.pcbLineFill.style.width = (ratio * 100) + '%';
+  els.pcbTrack.classList.toggle('burst', state.isBursting);
+
+  starSlots.forEach((star, i) => star.classList.toggle('filled', i < filledCount));
+  els.starLineFill.style.width = (ratio * 100) + '%';
+  els.starTrack.classList.toggle('burst', state.isBursting);
+
+  rainbowBands.forEach((band) => {
+    band.el.style.strokeDashoffset = band.length * (1 - ratio);
+  });
+  els.rainbowArcWrap.classList.toggle('burst', state.isBursting);
+}
+
+function render() {
+  const chance = getChance();
+  const effReq = getEffectiveReq();
+  const hidden = isGimmickActive('hidden');
+
+  // 안전망: 보스전에서 확률이 5% 밑으로 오래 버티면(돈이 없어 퇴장권도 못 살 수 있으니) 무료 긴급 퇴장 제공
+  if (state.bossActive && chance < 0.05) {
+    if (!state.lowChanceSince) state.lowChanceSince = Date.now();
+  } else {
+    state.lowChanceSince = 0;
+  }
+  const emergencyReady = state.bossActive && state.lowChanceSince && (Date.now() - state.lowChanceSince > 90000);
+  els.emergencyRetreat.classList.toggle('show', emergencyReady);
+
+  els.stageNo.textContent = state.stage;
+  els.goldValue.textContent = `💰 ${fmt(state.gold)}`;
+  els.levelValue.textContent = fmt(state.level);
+  els.reqSub.textContent = hidden ? 'Target: ???' : `Target: ${fmt(effReq)}`;
+  els.reqSub.classList.toggle('spiking', isSpikeActive());
+  els.barFill.style.width = hidden ? '0%' : Math.min(100, (state.level / effReq) * 100) + '%';
+  els.barTrack.classList.toggle('unknown', hidden);
+  els.chanceText.textContent = hidden ? '🔒 ???' : Math.round(chance * 100) + '%';
+  els.chanceText.className = 'chance' + (hidden ? '' : (chance < 0.25 ? ' low' : ''));
+  els.ratioText.textContent = hidden ? '??? / ???' : `${fmt(state.level)} / ${fmt(effReq)}`;
+  els.statClick.textContent = `Click Power ${fmt(state.clickPower * getClickTreeMult())}`;
+  els.statIdle.textContent = `Per Sec ${fmt(state.idlePower * getIdleTreeMult())}`;
+  const beyondFinal = state.stage > FINAL_STAGE;
+  els.challengeBtn.disabled = state.level <= 0 || beyondFinal;
+  els.challengeBtn.textContent = beyondFinal ? 'COMPLETED' : 'CHALLENGE';
+  if (beyondFinal) {
+    els.reqSub.textContent = `🏆 Summit reached — Stage ${FINAL_STAGE} cleared`;
+    els.chanceText.textContent = '—';
+    els.ratioText.textContent = '';
+  }
+  els.winStreakEl.textContent = state.winStreak;
+  els.loseStreakEl.textContent = state.loseStreak;
+
+  // 연승/연패 5단계 이펙트 — 패널 하단 바깥쪽에서 자라나는 불꽃/서리, 티어가 오를수록 더 높고 크게
+  const streakTier = (n) => n < 5 ? 0 : Math.min(5, Math.floor((n - 5) / 5) + 1);
+  const fireTier = streakTier(state.winStreak);
+  const frostTier = streakTier(state.loseStreak);
+  const fireScale = 0.55 + fireTier * 0.22;   // tier1≈0.77x ~ tier5≈1.65x
+  const frostScale = 0.5 + frostTier * 0.2;
+
+  els.fxHeatEl.classList.toggle('show', fireTier > 0);
+  if (fireTier > 0) heatBlobs.forEach((el) => {
+    el.style.width = (parseFloat(el.dataset.baseW) * fireScale) + 'px';
+    el.style.height = (parseFloat(el.dataset.baseH) * fireScale) + 'px';
+  });
+
+  els.fxFrostEl.classList.toggle('show', frostTier > 0);
+  if (frostTier > 0) frostBlobs.forEach((el) => {
+    el.style.width = (parseFloat(el.dataset.baseW) * frostScale) + 'px';
+    el.style.height = (parseFloat(el.dataset.baseH) * frostScale) + 'px';
+  });
+
+  els.buffs.innerHTML = '';
+  if (isPowerActive()) {
+    const chip = document.createElement('span'); chip.className = 'buff-chip buff-power';
+    chip.textContent = `🔥 x4/sec (${Math.ceil(state.powerRemainMs / 1000)}s)`; els.buffs.appendChild(chip);
+  } else if (isSpurtActive()) {
+    const chip = document.createElement('span'); chip.className = 'buff-chip';
+    chip.textContent = `⚡ x2/sec (${Math.ceil(state.spurtRemainMs / 1000)}s)`; els.buffs.appendChild(chip);
+  }
+  if (state.powerRemainMs > 0 && state.spurtRemainMs > 0) {
+    const chip = document.createElement('span'); chip.className = 'buff-chip';
+    chip.textContent = `⏳ Spurt waiting ${Math.ceil(state.spurtRemainMs / 1000)}s`; els.buffs.appendChild(chip);
+  }
+  if (state.nextChanceBonus > 0) {
+    const chip = document.createElement('span'); chip.className = 'buff-chip';
+    chip.textContent = `🍀 Next challenge +${Math.round(state.nextChanceBonus * 100)}%p`; els.buffs.appendChild(chip);
+  }
+  if (state.nextInsurance === 'full') {
+    const chip = document.createElement('span'); chip.className = 'buff-chip buff-insure';
+    chip.textContent = '🛡 Full Insurance ready'; els.buffs.appendChild(chip);
+  }
+
+  els.panel.classList.toggle('glow-power', isPowerActive());
+  els.panel.classList.toggle('glow-spurt', !isPowerActive() && isSpurtActive());
+
+  renderBossUI();
+
+  renderShop();
+  renderSkins();
+  renderDamageFonts();
+  renderProgressGimmick();
+  renderRebirth();
+}
+
+function renderRebirth() {
+  els.masteryPointsEl.textContent = state.masteryPoints;
+  els.prestigeCountEl.textContent = state.prestigeCount;
+
+  const trees = [
+    { key: 'idle', name: 'Idle Mastery', desc: 'Boosts passive EXP/sec', level: state.idleTreeLevel },
+    { key: 'click', name: 'Click Mastery', desc: 'Boosts EXP per click', level: state.clickTreeLevel },
+    { key: 'gold', name: 'Gold Mastery', desc: 'Boosts gold from clears', level: state.goldTreeLevel },
+    { key: 'crit', name: 'Critical Mastery', desc: `Chance to gain x${CRIT_MULT} EXP on a hit`, level: state.critTreeLevel, isCrit: true }
+  ];
+
+  els.treeList.innerHTML = trees.map((t) => {
+    const maxed = isTreeMaxed(t.key);
+    const cost = treeLevelCost(t.level);
+    const affordable = !maxed && state.masteryPoints >= cost;
+    const barPct = maxed ? 100 : Math.min(100, Math.round((state.masteryPoints / cost) * 100));
+    const statLabel = t.isCrit
+      ? `Lv.${t.level} · ${Math.round(getCritChance() * 100)}% crit chance${maxed ? ' (MAX)' : ''}`
+      : `Lv.${t.level} · x${fmt(getTreeMult(t.level))}`;
+    const desc = maxed ? `Capped at ${Math.round(CRIT_CHANCE_CAP * 100)}% — no further gain` : t.desc;
+    return `<div class="tree-row${maxed ? ' maxed' : ''}">
+      <div class="tree-row-top">
+        <span class="tree-name">${t.name}</span>
+        <span class="tree-level">${statLabel}</span>
+      </div>
+      <div class="tree-bar-track"><div class="tree-bar-fill" style="width:${barPct}%"></div></div>
+      <div class="tree-row-bottom">
+        <span>${desc}</span>
+        <button data-tree="${t.key}" ${affordable ? '' : 'disabled'}>${maxed ? 'MAX' : `+1 (${cost}pt)`}</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  els.treeList.querySelectorAll('button[data-tree]').forEach((btn) => {
+    btn.addEventListener('click', () => buyTreeLevel(btn.dataset.tree));
+  });
+
+  els.rebirthBtn.disabled = !canRebirth();
+  els.rebirthBtn.textContent = canRebirth()
+    ? `🔄 Rebirth Now (+${getRebirthPoints()} pts)`
+    : `🔄 Rebirth (reach stage ${REBIRTH_MIN_STAGE})`;
+  els.rebirthNote.textContent = canRebirth()
+    ? 'Resets stage, gold and items. Skins and mastery trees are kept.'
+    : `Reach stage ${REBIRTH_MIN_STAGE} to unlock your first rebirth.`;
+}
+
+const DEBUFF_INFO = {
+  skill: { icon: '⚡', name: 'Boss Skill', desc: 'Time your clicks on the rings to parry — chain them for big EXP' },
+  drain: { icon: '🩸', name: 'EXP Drain', desc: 'Losing EXP every second — out-earn it to survive' },
+  hidden: { icon: '🌫️', name: 'Hidden Target', desc: "You can't see how much EXP you need" },
+  clickNull: { icon: '🔒', name: 'Click Locked', desc: 'Training adds no EXP right now' },
+  idleNull: { icon: '❄️', name: 'Idle Frozen', desc: 'Passive income is stopped' },
+  spike: { icon: '⚡', name: 'Spike Risk', desc: 'The target can briefly skyrocket at random' },
+};
+
+function renderBossUI() {
+  const showBanner = state.bossActive || state.invasionActive;
+  els.bossBanner.classList.toggle('show', showBanner);
+  if (!state.invasionActive) {
+    els.bossBanner.textContent = '⚠ BOSS';
+    els.bossBanner.classList.remove('invasion');
+  }
+
+  els.panel.classList.toggle('boss-mode', state.bossActive && !state.invasionActive);
+  els.panel.classList.toggle('invasion-mode', state.invasionActive);
+
+  // 디버프 창 — 지금 걸려있는 기믹을 설명해줌 (보스전 + 난입보스전 공통)
+  const activeGimmicks = getActiveGimmicks();
+  els.debuffWindow.classList.toggle('show', activeGimmicks.length > 0);
+  if (activeGimmicks.length > 0) {
+    els.debuffWindow.innerHTML = activeGimmicks.map((key) => {
+      const info = DEBUFF_INFO[key];
+      const spiking = key === 'spike' && isSpikeActive();
+      const locked = false;
+      const active = spiking || locked;
+      return `<div class="debuff-row${active ? ' active' : ''}">
+        <span class="debuff-icon">${info.icon}</span>
+        <span class="debuff-text"><b>${info.name}</b>${spiking ? ' — ACTIVE NOW' : ''}${locked ? ' — LOCKED!' : ''}<br>${info.desc}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // 클릭 무효형
+  const clickLocked = isGimmickActive('clickNull');
+  els.growBtn.classList.toggle('locked-click', clickLocked);
+
+  // 방치 무효형: 성에 오버레이
+  const idleFrozen = isGimmickActive('idleNull');
+  els.frostOverlay.classList.toggle('show', idleFrozen);
+  els.statIdle.classList.toggle('frozen', idleFrozen);
+}
+
+function renderShop() {
+  els.itemList.innerHTML = '';
+  Object.values(ITEMS).forEach((item) => {
+    const armed = item.singleUse && (state.nextChanceBonus > 0 || state.confidenceUsedThisStage);
+    const row = document.createElement('div');
+    row.className = 'row-item' + (item.isGacha ? ' gacha' : '') + (item.bossOnly && !state.bossActive ? ' locked' : '');
+    const info = document.createElement('div');
+    info.className = 'row-info';
+    let desc = (item.bossOnly && !state.bossActive) ? item.desc + ' — available during boss fights only' : item.desc;
+    if (armed) desc = item.desc + (state.nextChanceBonus > 0 ? ' — already active, use it first' : ' — already used this stage');
+    info.innerHTML = `<div class="row-name">${item.name}</div><div class="row-desc">${desc}</div>`;
+    const btn = document.createElement('button');
+    if (item.bossOnly && !state.bossActive) {
+      btn.textContent = 'BOSS ONLY';
+      btn.disabled = true;
+    } else if (armed) {
+      btn.textContent = 'ACTIVE';
+      btn.disabled = true;
+    } else {
+      btn.textContent = `${fmt(item.cost)} G`;
+      btn.disabled = state.gold < item.cost;
+      btn.addEventListener('click', () => {
+        if (!item.isGacha) SFX.purchase();
+        state.itemsBought += 1;
+        item.buy();
+        render();
+      });
+    }
+    row.appendChild(info); row.appendChild(btn);
+    els.itemList.appendChild(row);
+  });
+}
+
+function renderSkins() {
+  els.skinList.innerHTML = '';
+  SKINS.forEach((skin) => {
+    const unlocked = state.unlockedSkins.has(skin.key);
+    const isCurrent = state.skin === skin.key;
+    const row = document.createElement('div');
+    row.className = 'row-item skin-row' + (!unlocked ? ' locked' : '') + (isCurrent ? ' current' : '');
+
+    let descText = skin.desc;
+    if (!unlocked) {
+      if (skin.type === 'stage') descText = `Unlocks at stage ${skin.requirement}`;
+      else if (skin.type === 'paid') descText = 'Premium only (coming soon)';
+      else descText = skin.desc + ' — Locked';
+    }
+
+    const swatch = document.createElement('div');
+    swatch.className = 'skin-swatch';
+    if (skin.preview.b === 'rainbow') {
+      swatch.style.background = `conic-gradient(#ff6ec7, #ffd166, #6effc7, #b98cff, #ff6ec7)`;
+    } else if (skin.preview.b === 'blocks') {
+      swatch.style.background = `linear-gradient(135deg, #ffcc00 0 25%, #00e5ff 25% 50%, #a855f7 50% 75%, #35e0a1 75% 100%)`;
+    } else {
+      swatch.style.background = `linear-gradient(135deg, ${skin.preview.a} 40%, ${skin.preview.b})`;
+    }
+
+    const info = document.createElement('div');
+    info.className = 'row-info';
+    info.innerHTML = `<div class="row-name">${skin.name}</div><div class="row-desc">${descText}</div>`;
+
+    const btn = document.createElement('button');
+    if (isCurrent) { btn.textContent = 'APPLIED'; btn.disabled = true; }
+    else if (unlocked) { btn.textContent = 'APPLY'; btn.disabled = false; btn.addEventListener('click', () => { applySkin(skin.key); render(); }); }
+    else { btn.textContent = 'LOCKED'; btn.disabled = true; }
+
+    row.appendChild(swatch);
+    row.appendChild(info);
+    row.appendChild(btn);
+    els.skinList.appendChild(row);
+  });
+}
+
+function renderDamageFonts() {
+  els.fontList.innerHTML = '';
+  DAMAGE_FONTS.forEach((f) => {
+    const unlocked = state.unlockedDamageFonts.has(f.key);
+    const isCurrent = state.damageFont === f.key;
+    const row = document.createElement('div');
+    row.className = 'row-item' + (!unlocked ? ' locked' : '') + (isCurrent ? ' current' : '');
+
+    const preview = document.createElement('div');
+    preview.className = 'skin-swatch';
+    preview.style.display = 'flex'; preview.style.alignItems = 'center'; preview.style.justifyContent = 'center';
+    preview.style.background = 'var(--bg)'; preview.style.overflow = 'hidden';
+    const previewText = document.createElement('span');
+    previewText.className = 'float-num loss' + (f.cssClass ? ' ' + f.cssClass : '');
+    previewText.style.cssText = 'position:static; animation:none; font-size:14px;';
+    previewText.textContent = '-99';
+    preview.appendChild(previewText);
+
+    const info = document.createElement('div');
+    info.className = 'row-info';
+    const descText = unlocked ? f.desc : `Unlocks at stage ${f.requirement}`;
+    info.innerHTML = `<div class="row-name">${f.name}</div><div class="row-desc">${descText}</div>`;
+
+    const btn = document.createElement('button');
+    if (isCurrent) { btn.textContent = 'APPLIED'; btn.disabled = true; }
+    else if (unlocked) { btn.textContent = 'APPLY'; btn.disabled = false; btn.addEventListener('click', () => { state.damageFont = f.key; render(); }); }
+    else { btn.textContent = 'LOCKED'; btn.disabled = true; }
+
+    row.appendChild(preview);
+    row.appendChild(info);
+    row.appendChild(btn);
+    els.fontList.appendChild(row);
+  });
+}
+
+function showGachaResult(result) {
+  SFX.gacha(result.cls === 'jackpot');
+  els.gachaResultName.textContent = result.name;
+  els.gachaResultDesc.textContent = result.desc;
+  els.gachaCard.className = 'result-card' + (result.cls ? ' ' + result.cls : '');
+  els.gachaOverlay.classList.add('show');
+}
+els.gachaClose.addEventListener('click', () => { els.gachaOverlay.classList.remove('show'); render(); });
+
+function showSkinUnlock(skin) {
+  SFX.skinUnlock();
+  els.skinResultName.textContent = skin.name;
+  els.skinResultDesc.textContent = 'A new skin has been unlocked! Apply it from the Skins menu.';
+  els.skinOverlay.classList.add('show');
+}
+els.skinClose.addEventListener('click', () => { els.skinOverlay.classList.remove('show'); render(); });
+
+els.growBtn.addEventListener('click', (e) => {
+  if (isGimmickActive('clickNull')) {
+    SFX.denied();
+    const x = document.createElement('div');
+    x.className = 'denied-x';
+    x.textContent = '✕';
+    els.growBtn.style.position = 'relative';
+    els.growBtn.appendChild(x);
+    setTimeout(() => x.remove(), 600);
+    return;
+  }
+  SFX.click();
+  if (!bgmTimer) refreshBgm(); // 브라우저 정책상 첫 사용자 조작 이후에만 재생 가능
+  state.totalClicks += 1;
+  let clickGain = state.clickPower * getClickTreeMult();
+  const clickCrit = Math.random() < getCritChance();
+  if (clickCrit) clickGain *= CRIT_MULT;
+  state.level += clickGain;
+  spawnFloat(clickGain, true, clickCrit);
+  render();
+});
+
+setInterval(() => {
+  state.totalPlaySeconds += 1;
+  let gain = getIdlePerSec();
+  let idleCrit = false;
+  if (gain > 0) {
+    idleCrit = Math.random() < getCritChance();
+    if (idleCrit) gain *= CRIT_MULT;
+    state.level += gain;
+    spawnFloat(gain, true, idleCrit);
+  }
+  if (state.powerRemainMs > 0) state.powerRemainMs = Math.max(0, state.powerRemainMs - 1000);
+  else if (state.spurtRemainMs > 0) state.spurtRemainMs = Math.max(0, state.spurtRemainMs - 1000);
+
+  // ===== EXP 드레인형: 방치 무효와 별개로 초당 경험치가 실제로 깎임 (보스 + 난입보스 공통) =====
+  // 스킬 시퀀스 중에는 오버레이 때문에 TRAIN을 누를 수 없으므로 드레인도 멈춤
+  // (조작이 막힌 구간에서 손실만 누적되면 불공정)
+  if (isGimmickActive('drain') && !state.skillActive) {
+    const bossCrit = Math.random() < BOSS_CRIT_CHANCE;
+    const chokes = isGimmickActive('clickNull') || isGimmickActive('idleNull');
+    const rate = state.req * DRAIN_RATE * getBossIntensity()
+      * (chokes ? 0.7 : 1) * (bossCrit ? BOSS_CRIT_MULT : 1);
+    const drainAmount = Math.min(state.level, rate);
+    state.level = Math.max(0, state.level - rate);
+    spawnFloat(drainAmount, false, bossCrit);
+    if (bossCrit) {
+      els.panel.classList.remove('shake');
+      void els.panel.offsetWidth;
+      els.panel.classList.add('shake');
+    }
+  }
+
+  // ===== 보스 스킬 패링: 주기적으로 발동 =====
+  if (state.bossActive && isGimmickActive('skill') && !state.skillActive
+      && state.nextSkillAt && Date.now() >= state.nextSkillAt) {
+    state.nextSkillAt = Date.now() + SKILL_INTERVAL_MS;
+    startSkillSequence();
+  }
+
+  // ===== 요구치 스파이크: 랜덤 타이밍에 잠깐 요구치가 폭등 =====
+  if (state.bossActive && state.bossGimmicks.includes('spike')) {
+    const now = Date.now();
+    if (!isSpikeActive() && state.nextSpikeAt && now >= state.nextSpikeAt) {
+      state.spikeUntil = now + SPIKE_DURATION_MS;
+      state.nextSpikeAt = state.spikeUntil + 4000 + Math.random() * 6000;
+    }
+  }
+
+  // ===== 데드라인: 시간 내 미클리어시 요구치 영구 ×6 잠금 =====
+
+  // ===== 난입 보스: 아주 낮은 확률로 갑자기 등장 → 수락/스킵 선택 =====
+  const invasionReady = !state.invasionActive && !state.invasionPending && !state.bossActive
+    && Date.now() > state.invasionCooldownUntil;
+  if (invasionReady && Math.random() < 0.0015) {
+    promptInvasion();
+  }
+
+  render();
+}, 1000);
+
+const INVASION_GIMMICK_POOL = ['drain', 'hidden', 'clickNull', 'idleNull'];
+
+function promptInvasion() {
+  state.invasionPending = true;
+  const gimmick = INVASION_GIMMICK_POOL[Math.floor(Math.random() * INVASION_GIMMICK_POOL.length)];
+  state.invasionGimmick = gimmick;
+  const info = DEBUFF_INFO[gimmick];
+
+  els.invasionGimmickName.textContent = `${info.icon} ${info.name}`;
+  els.invasionGimmickDesc.textContent = info.desc;
+  els.invasionOverlay.classList.add('show');
+}
+
+els.invasionAccept.addEventListener('click', () => {
+  els.invasionOverlay.classList.remove('show');
+  state.invasionPending = false;
+  state.invasionActive = true;
+  state.invasionEndsAt = Date.now() + 10000;
+  triggerEntrance(true);
+  setTimeout(() => {
+    if (state.invasionActive) {
+      state.invasionActive = false;
+      state.invasionCooldownUntil = Date.now() + 120000;
+      state.invasionGimmick = null;
+      els.logText.textContent = '💨 The invasion boss slipped away...';
+      els.logText.className = 'log';
+      render();
+    }
+  }, 10000);
+  render();
+});
+
+els.invasionSkip.addEventListener('click', () => {
+  els.invasionOverlay.classList.remove('show');
+  state.invasionPending = false;
+  state.invasionCooldownUntil = Date.now() + 60000;
+  els.logText.textContent = '🏃 Skipped the invasion boss';
+  els.logText.className = 'log';
+  render();
+});
+
+setInterval(() => {
+  const mult = getBuffMult();
+  if (mult === 1) return;
+  const spark = document.createElement('div');
+  spark.className = 'spark';
+  spark.style.left = (10 + Math.random() * 80) + '%';
+  spark.style.top = (20 + Math.random() * 40) + '%';
+  spark.style.background = mult === 4 ? '#ff9a4d' : '#35e0a1';
+  document.querySelector('.frame').appendChild(spark);
+  setTimeout(() => spark.remove(), 900);
+}, 250);
+
+els.challengeBtn.addEventListener('click', () => {
+  // ===== 난입 보스 처리 (별도 보너스 이벤트, 스테이지 진행에는 영향 없음) =====
+  if (state.invasionActive) {
+    const chance = getChance();
+    const success = Math.random() < chance;
+    state.invasionActive = false;
+    state.invasionCooldownUntil = Date.now() + 120000;
+    els.bossBanner.classList.remove('invasion');
+
+    if (success) {
+      const bonus = Math.round(CONFIG.goldPerClear(state.stage) * 4 * getGoldTreeMult());
+      state.gold += bonus;
+      SFX.bossClear();
+      els.logText.textContent = `👑 Invasion boss defeated! +${fmt(bonus)} bonus gold`;
+      els.logText.className = 'log success';
+    } else {
+      SFX.fail();
+      els.logText.textContent = '💥 The invasion boss resisted and escaped...';
+      els.logText.className = 'log fail';
+      els.panel.classList.remove('shake');
+      void els.panel.offsetWidth;
+      els.panel.classList.add('shake');
+    }
+    state.invasionGimmick = null;
+    render();
+    return;
+  }
+
+  const chance = getChance();
+  state.nextChanceBonus = 0;
+  const insurance = state.nextInsurance;
+  state.nextInsurance = null;
+
+  const success = Math.random() < chance;
+
+  if (success) {
+    const preClearRatio = Math.min(1, state.level / getEffectiveReq()); // req가 바뀌기 전 스냅샷
+    const wasBoss = state.bossActive;
+    const clearedStage = state.stage;
+
+    const gained = Math.round(CONFIG.goldPerClear(state.stage) * getGoldTreeMult());
+    state.gold += gained;
+    state.stage += 1;
+    state.clickPower *= CONFIG.powerGrowth;
+    state.idlePower = state.idlePower * CONFIG.powerGrowth + CONFIG.idleBootstrap;
+    state.req *= CONFIG.reqGrowth;
+    state.winStreak += 1;
+    state.loseStreak = 0;
+    state.confidenceUsedThisStage = false;
+    state.bestStage = Math.max(state.bestStage, state.stage);
+    if (wasBoss) state.bossesDefeated += 1;
+    setupStage();
+
+    if (wasBoss) SFX.bossClear(); else SFX.success();
+
+    els.logText.textContent = `✅ Stage ${clearedStage} cleared! +${fmt(gained)} gold`;
+    els.logText.className = 'log success';
+
+    if (['blocks', 'pcb', 'constellation', 'rainbow'].includes(state.skin) && preClearRatio > 0) {
+      state.isBursting = true;
+      state.burstSnapshot = preClearRatio;
+      setTimeout(() => { state.isBursting = false; render(); }, 700);
+    }
+
+    // ===== 최종 스테이지 클리어 → 엔딩 =====
+    if (clearedStage >= FINAL_STAGE && !state.hasFinished) {
+      state.hasFinished = true;
+      stopBossDrone();
+      setTimeout(showEndingCredits, 900);
+    }
+  } else {
+    SFX.fail();
+    let penaltyRate = CONFIG.failPenaltyPct;
+    let insuranceMsg = '';
+    if (insurance === 'full') { penaltyRate = 0; insuranceMsg = ' (Full Insurance activated!)'; }
+    const penalty = state.level * penaltyRate;
+    state.level = Math.max(0, state.level - penalty);
+    spawnFloat(penalty, false);
+    state.loseStreak += 1;
+    state.winStreak = 0;
+
+    els.logText.textContent = `❌ Failed... lost ${fmt(penalty)} EXP${insuranceMsg}`;
+    els.logText.className = 'log fail';
+
+    els.panel.classList.remove('shake');
+    void els.panel.offsetWidth;
+    els.panel.classList.add('shake');
+  }
+
+  checkSkinUnlocks();
+  checkDamageFontUnlocks();
+  render();
+});
+
+els.shopToggle.addEventListener('click', () => {
+  els.shopPanel.classList.toggle('open');
+  els.skinPanel.classList.remove('open');
+  els.rebirthPanel.classList.remove('open');
+});
+els.skinToggle.addEventListener('click', () => {
+  els.skinPanel.classList.toggle('open');
+  els.shopPanel.classList.remove('open');
+  els.rebirthPanel.classList.remove('open');
+});
+els.rebirthToggle.addEventListener('click', () => {
+  els.rebirthPanel.classList.toggle('open');
+  els.shopPanel.classList.remove('open');
+  els.skinPanel.classList.remove('open');
+});
+els.rebirthBtn.addEventListener('click', doRebirth);
+
+function performReset() {
+  stopBossDrone();
+  state.stage = 1;
+  state.req = 20;
+  state.level = 0;
+  state.clickPower = 1;
+  state.idlePower = 0;
+  state.gold = 0;
+  state.spurtRemainMs = 0;
+  state.powerRemainMs = 0;
+  state.nextChanceBonus = 0;
+  state.confidenceUsedThisStage = false;
+  state.nextInsurance = null;
+  state.trainingBookCount = 0;
+  state.autoManualCount = 0;
+  state.winStreak = 0;
+  state.loseStreak = 0;
+  state.isBursting = false;
+  state.burstSnapshot = 0;
+  state.bossActive = false;
+  state.bossGimmicks = [];
+  state.spikeUntil = 0;
+  state.nextSpikeAt = 0;
+  state.invasionActive = false;
+  state.invasionEndsAt = 0;
+  state.invasionGimmick = null;
+  state.invasionPending = false;
+  state.invasionCooldownUntil = 0;
+  state.bestStage = 1;
+  state.totalPlaySeconds = 0;
+  state.itemsBought = 0;
+  state.totalClicks = 0;
+  state.bossesDefeated = 0;
+  state.hasFinished = false;
+
+  els.logText.textContent = 'Restarted — good luck!';
+  els.logText.className = 'log';
+  setupStage();
+  render();
+  saveGame();
+}
+
+function resetGame() {
+  const earned = getRebirthPoints();
+  showConfirm(
+    '⟳ Restart?',
+    `Starts fresh from Stage 1. You'll bank ${earned} mastery points from this run, and keep your skins and trees. Your best stage (${state.bestStage}) will be posted to the World Leaderboard.`,
+    async () => {
+      // Restart도 하나의 '생'을 마감하는 행위이므로 환생과 동일하게 숙련도 포인트를 지급해야 함
+      // (이게 없으면 죽고 재시작할 때마다 아무 보상 없이 진행만 날아감)
+      state.masteryPoints += earned;
+      state.lastRunPoints = earned;
+      await submitScore();
+      await showRunSummary();
+      // 실제 리셋은 결과 화면에서 "Start New Run"을 눌러야 진행됨
+    }
+  );
+}
+els.restartBtn.addEventListener('click', resetGame);
+
+els.emergencyRetreat.addEventListener('click', () => {
+  state.stage = Math.max(1, state.stage - 1);
+  state.req = state.req / CONFIG.reqGrowth;
+  state.confidenceUsedThisStage = false;
+  state.lowChanceSince = 0;
+  setupStage();
+  els.logText.textContent = '🆘 Emergency retreat — no gold lost, just an escape';
+  els.logText.className = 'log';
+  render();
+});
+els.summaryContinue.addEventListener('click', () => {
+  els.summaryOverlay.classList.remove('show');
+  performReset();
+});
+
+els.muteToggle.addEventListener('click', () => {
+  soundOn = !soundOn;
+  els.muteToggle.textContent = soundOn ? '🔊' : '🔇';
+  if (soundOn) {
+    ensureAudio();
+    if (state.bossActive) startBossDrone();
+    refreshBgm();
+  } else {
+    stopBossDrone();
+    stopBgm();
+  }
+});
+
+/*
+  ===== 저장 & 월드 랭킹 =====
+  Claude 아티팩트 내장 저장소(window.storage)를 사용. 개인 저장은 이 Claude 계정에
+  자동으로 묶이고(별도 로그인 불필요), 랭킹판은 공유 데이터라 이 게임을 여는 모두에게 보임.
+  이 API는 Claude 미리보기 안에서만 동작하므로, 없으면 조용히 기능을 꺼둠(게임 자체는 정상 동작).
+*/
+function storageOk() {
+  return typeof window !== 'undefined' && typeof window.storage !== 'undefined' && window.storage !== null;
+}
+
+async function saveGame() {
+  if (!storageOk()) return;
+  try {
+    const payload = {
+      playerName: state.playerName,
+      stage: state.stage, req: state.req, level: state.level,
+      clickPower: state.clickPower, idlePower: state.idlePower, gold: state.gold,
+      trainingBookCount: state.trainingBookCount, autoManualCount: state.autoManualCount,
+      winStreak: state.winStreak, loseStreak: state.loseStreak,
+      skin: state.skin, unlockedSkins: Array.from(state.unlockedSkins),
+      damageFont: state.damageFont, unlockedDamageFonts: Array.from(state.unlockedDamageFonts),
+      bestStage: state.bestStage,
+      totalPlaySeconds: state.totalPlaySeconds, itemsBought: state.itemsBought,
+      totalClicks: state.totalClicks, bossesDefeated: state.bossesDefeated,
+      hasFinished: state.hasFinished,
+      masteryPoints: state.masteryPoints, idleTreeLevel: state.idleTreeLevel,
+      clickTreeLevel: state.clickTreeLevel, goldTreeLevel: state.goldTreeLevel,
+      critTreeLevel: state.critTreeLevel,
+      prestigeCount: state.prestigeCount
+    };
+    await window.storage.set('save-state', JSON.stringify(payload), false);
+  } catch (e) { /* 저장 실패해도 게임 진행에는 지장 없음 */ }
+}
+
+async function loadGame() {
+  if (!storageOk()) return null;
+  try {
+    const result = await window.storage.get('save-state', false);
+    if (!result) return null;
+    return JSON.parse(result.value);
+  } catch (e) {
+    return null; // 저장된 게 없으면 첫 플레이로 간주
+  }
+}
+
+function applySave(data) {
+  state.playerName = data.playerName || '';
+  state.stage = data.stage || 1;
+  state.req = data.req || 20;
+  state.level = data.level || 0;
+  state.clickPower = data.clickPower || 1;
+  state.idlePower = data.idlePower || 0;
+  state.gold = data.gold || 0;
+  state.trainingBookCount = data.trainingBookCount || 0;
+  state.autoManualCount = data.autoManualCount || 0;
+  state.winStreak = data.winStreak || 0;
+  state.loseStreak = data.loseStreak || 0;
+  state.skin = data.skin || 'base';
+  state.unlockedSkins = new Set(data.unlockedSkins && data.unlockedSkins.length ? data.unlockedSkins : ['base']);
+  state.damageFont = data.damageFont || 'default';
+  state.unlockedDamageFonts = new Set(data.unlockedDamageFonts && data.unlockedDamageFonts.length ? data.unlockedDamageFonts : ['default']);
+  state.bestStage = data.bestStage || state.stage;
+  state.totalPlaySeconds = data.totalPlaySeconds || 0;
+  state.itemsBought = data.itemsBought || 0;
+  state.totalClicks = data.totalClicks || 0;
+  state.bossesDefeated = data.bossesDefeated || 0;
+  state.hasFinished = !!data.hasFinished;
+  state.masteryPoints = data.masteryPoints || 0;
+  state.idleTreeLevel = data.idleTreeLevel || 0;
+  state.clickTreeLevel = data.clickTreeLevel || 0;
+  state.goldTreeLevel = data.goldTreeLevel || 0;
+  state.critTreeLevel = data.critTreeLevel || 0;
+  state.prestigeCount = data.prestigeCount || 0;
+  document.body.className = state.skin === 'base' ? '' : 'skin-' + state.skin;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function submitScore() {
+  if (!storageOk() || !state.playerName) return;
+  try {
+    const payload = {
+      name: state.playerName,
+      bestStage: state.bestStage,
+      playSeconds: state.totalPlaySeconds,
+      prestigeCount: state.prestigeCount,
+      masteryTotal: state.idleTreeLevel + state.clickTreeLevel + state.goldTreeLevel + state.critTreeLevel,
+      updatedAt: Date.now()
+    };
+    await window.storage.set('leaderboard:' + state.playerName, JSON.stringify(payload), true);
+  } catch (e) { /* 랭킹 등록 실패해도 재시작 자체는 계속 진행 */ }
+}
+
+async function getMyRank() {
+  if (!storageOk()) return null;
+  try {
+    const listResult = await window.storage.list('leaderboard:', true);
+    const keys = (listResult && listResult.keys) || [];
+    const entries = [];
+    for (const key of keys) {
+      try {
+        const r = await window.storage.get(key, true);
+        if (r) entries.push(JSON.parse(r.value));
+      } catch (e) {}
+    }
+    // 같은 스테이지면 더 빨리 도달한 쪽이 상위 — 타임어택 경쟁이 성립하도록
+    entries.sort((a, b) => {
+      const d = (b.bestStage || 0) - (a.bestStage || 0);
+      if (d !== 0) return d;
+      return (a.playSeconds || Infinity) - (b.playSeconds || Infinity);
+    });
+    const idx = entries.findIndex((e) => e.name === state.playerName);
+    return { rank: idx >= 0 ? idx + 1 : null, total: entries.length };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function showRunSummary() {
+  const runMastery = state.idleTreeLevel + state.clickTreeLevel + state.goldTreeLevel + state.critTreeLevel;
+  els.summaryStats.innerHTML =
+    `Best stage reached: <b style="color:var(--ok)">${state.bestStage}</b><br>` +
+    `Time played: <b>${fmtDuration(state.totalPlaySeconds)}</b><br>` +
+    `Mastery earned this run: <b style="color:var(--accent)">+${state.lastRunPoints || 0} pts</b><br>` +
+    `Total mastery points: <b>${state.masteryPoints}</b><br>` +
+    `Mastery levels: <b>${runMastery}</b> (Idle ${state.idleTreeLevel} / Click ${state.clickTreeLevel} / Gold ${state.goldTreeLevel} / Crit ${state.critTreeLevel})`;
+
+  if (storageOk()) {
+    els.summaryRank.textContent = 'Checking leaderboard...';
+    const rankInfo = await getMyRank();
+    if (rankInfo && rankInfo.rank) {
+      els.summaryRank.textContent = `You placed #${rankInfo.rank} of ${rankInfo.total}`;
+    } else {
+      els.summaryRank.textContent = 'Score submitted!';
+    }
+  } else {
+    els.summaryRank.textContent = 'Score submitted!';
+  }
+
+  els.summaryOverlay.classList.add('show');
+}
+
+async function renderLeaderboard() {
+  els.rankPlayerName.textContent = state.playerName || '(no name yet)';
+  if (!storageOk()) {
+    els.rankList.innerHTML = '<div class="rank-meta">Leaderboard only works inside the Claude preview.</div>';
+    return;
+  }
+  els.rankList.textContent = 'Loading...';
+  try {
+    const listResult = await window.storage.list('leaderboard:', true);
+    const keys = (listResult && listResult.keys) || [];
+    const entries = [];
+    for (const key of keys) {
+      try {
+        const r = await window.storage.get(key, true);
+        if (r) entries.push(JSON.parse(r.value));
+      } catch (e) { /* 개별 항목 하나 실패해도 나머지는 계속 표시 */ }
+    }
+    // 같은 스테이지면 더 빨리 도달한 쪽이 상위 — 타임어택 경쟁이 성립하도록
+    entries.sort((a, b) => {
+      const d = (b.bestStage || 0) - (a.bestStage || 0);
+      if (d !== 0) return d;
+      return (a.playSeconds || Infinity) - (b.playSeconds || Infinity);
+    });
+    const top = entries.slice(0, 20);
+    if (top.length === 0) {
+      els.rankList.innerHTML = '<div class="rank-meta">No scores yet — be the first to hit Restart!</div>';
+      return;
+    }
+    els.rankList.innerHTML = top.map((e, i) => `
+      <div class="rank-row${e.name === state.playerName ? ' me' : ''}">
+        <span class="rank-pos">${i + 1}</span>
+        <span class="rank-name">${escapeHtml(e.name || '?')}</span>
+        <span style="text-align:right;">
+          <span class="rank-stage">Stage ${e.bestStage || 0}</span>
+          <span class="rank-meta" style="display:block;">${e.playSeconds ? fmtDuration(e.playSeconds) : '—'}</span>
+        </span>
+      </div>`).join('');
+  } catch (e) {
+    els.rankList.innerHTML = '<div class="rank-meta">Could not load the leaderboard right now.</div>';
+  }
+}
+
+els.rankToggle.addEventListener('click', () => {
+  els.rankPanel.classList.toggle('open');
+  els.shopPanel.classList.remove('open');
+  els.skinPanel.classList.remove('open');
+  els.rebirthPanel.classList.remove('open');
+  if (els.rankPanel.classList.contains('open')) renderLeaderboard();
+});
+els.rankRefreshLink.addEventListener('click', renderLeaderboard);
+
+els.nameConfirm.addEventListener('click', async () => {
+  const val = (els.nameInput.value || '').trim().slice(0, 16);
+  state.playerName = val || ('Player' + Math.floor(Math.random() * 10000));
+  els.nameOverlay.classList.remove('show');
+  await saveGame();
+  render();
+});
+els.nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') els.nameConfirm.click(); });
+
+// 10초에 한 번 자동 저장 (메인 1초 틱을 재사용, 너무 자주 호출하지 않도록 카운터로 조절)
+let autosaveCounter = 0;
+setInterval(() => {
+  autosaveCounter += 1;
+  if (autosaveCounter >= 10) { autosaveCounter = 0; saveGame(); }
+}, 1000);
+
+async function initPlayer() {
+  if (!storageOk()) { setupStage(); render(); return; }
+  const data = await loadGame();
+  if (data && data.playerName) {
+    applySave(data);
+    setupStage();
+    render();
+  } else {
+    setupStage();
+    render();
+    els.nameOverlay.classList.add('show');
+  }
+}
+
+initPlayer();
+</script>
+
+</body>
+</html>
