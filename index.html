@@ -186,6 +186,15 @@
   .ending-stats .row { opacity: 0; animation: rowIn 0.3s ease forwards; }
   @keyframes rowIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
 
+  .start-logo {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-size: 26px; letter-spacing: 2px; color: #fff8f0; margin-bottom: 14px;
+    text-shadow: 0 0 4px #fff, 0 0 14px var(--accent), 0 0 28px var(--accent), 0 0 14px var(--purple);
+  }
+  .name-hint { font-size: 11px; min-height: 15px; color: var(--ink-dim); }
+  .name-hint.found { color: var(--ok); font-weight: 700; }
+  .name-hint b { color: var(--accent); }
+
   .ending-card { border-color: var(--accent); box-shadow: 0 0 80px rgba(255,221,51,0.45); max-width: 340px; }
   .ending-title {
     font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
@@ -839,10 +848,12 @@
 
   <div class="overlay" id="name-overlay">
     <div class="result-card" id="name-card">
-      <div class="big">👤 Enter your name</div>
-      <div class="result-desc">This name will show on the shared World Leaderboard when you Restart. Anyone who opens this game can see it.</div>
-      <input id="name-input" maxlength="16" placeholder="Your name" style="width:100%; box-sizing:border-box; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:14px; margin:10px 0; text-align:center;">
-      <button id="name-confirm" style="width:100%; background:var(--ok); color:#06140d; border:none; padding:10px; border-radius:8px; font-weight:800;">Start Playing</button>
+      <div class="start-logo">CLIMB OR BUST</div>
+      <div class="big" style="font-size:15px; margin-bottom:6px;">👤 Enter your name</div>
+      <div class="result-desc">Your progress is saved under this name on this device. Type the same name next time to continue where you left off.</div>
+      <input id="name-input" maxlength="16" placeholder="Your name" autocomplete="off" style="width:100%; box-sizing:border-box; padding:12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:15px; margin:12px 0 6px; text-align:center;">
+      <div class="name-hint" id="name-hint"></div>
+      <button id="name-confirm" style="width:100%; background:var(--ok); color:#06140d; border:none; padding:12px; border-radius:8px; font-weight:800; margin-top:10px;">Start Playing</button>
     </div>
   </div>
 
@@ -1377,6 +1388,7 @@ const els = {
   nameOverlay: document.getElementById('name-overlay'),
   nameInput: document.getElementById('name-input'),
   nameConfirm: document.getElementById('name-confirm'),
+  nameHint: document.getElementById('name-hint'),
   summaryOverlay: document.getElementById('summary-overlay'),
   summaryRank: document.getElementById('summary-rank'),
   summaryStats: document.getElementById('summary-stats'),
@@ -2767,7 +2779,9 @@ function storageOk() {
 
 // 개인 저장은 Claude 미리보기의 window.storage뿐 아니라, 실제 배포된 사이트에서는
 // 브라우저 자체 localStorage로도 동작해야 함(월드 랭킹판은 공유 데이터라 여전히 window.storage 필요)
-const LOCAL_SAVE_KEY = 'climb-or-bust-save';
+const LOCAL_SAVE_PREFIX = 'climb-or-bust-save:';
+const LAST_NAME_KEY = 'climb-or-bust-last-name';
+
 function localStoreOk() {
   try {
     return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
@@ -2775,51 +2789,63 @@ function localStoreOk() {
 }
 function personalStoreOk() { return storageOk() || localStoreOk(); }
 
+// 저장은 플레이어 이름별로 분리 — 같은 이름을 다시 입력하면 그 진행을 이어받음
+function saveKeyFor(name) { return LOCAL_SAVE_PREFIX + name; }
+
+function buildSavePayload() {
+  return {
+    playerName: state.playerName,
+    stage: state.stage, req: state.req, level: state.level,
+    clickPower: state.clickPower, idlePower: state.idlePower, gold: state.gold,
+    trainingBookCount: state.trainingBookCount, autoManualCount: state.autoManualCount,
+    winStreak: state.winStreak, loseStreak: state.loseStreak,
+    skin: state.skin, unlockedSkins: Array.from(state.unlockedSkins),
+    damageFont: state.damageFont, unlockedDamageFonts: Array.from(state.unlockedDamageFonts),
+    bestStage: state.bestStage,
+    totalPlaySeconds: state.totalPlaySeconds, itemsBought: state.itemsBought,
+    totalClicks: state.totalClicks, bossesDefeated: state.bossesDefeated,
+    hasFinished: state.hasFinished,
+    masteryPoints: state.masteryPoints, idleTreeLevel: state.idleTreeLevel,
+    clickTreeLevel: state.clickTreeLevel, goldTreeLevel: state.goldTreeLevel,
+    critTreeLevel: state.critTreeLevel,
+    prestigeCount: state.prestigeCount
+  };
+}
+
 async function saveGame() {
-  if (!personalStoreOk()) return;
+  if (!personalStoreOk() || !state.playerName) return;
   try {
-    const payload = {
-      playerName: state.playerName,
-      stage: state.stage, req: state.req, level: state.level,
-      clickPower: state.clickPower, idlePower: state.idlePower, gold: state.gold,
-      trainingBookCount: state.trainingBookCount, autoManualCount: state.autoManualCount,
-      winStreak: state.winStreak, loseStreak: state.loseStreak,
-      skin: state.skin, unlockedSkins: Array.from(state.unlockedSkins),
-      damageFont: state.damageFont, unlockedDamageFonts: Array.from(state.unlockedDamageFonts),
-      bestStage: state.bestStage,
-      totalPlaySeconds: state.totalPlaySeconds, itemsBought: state.itemsBought,
-      totalClicks: state.totalClicks, bossesDefeated: state.bossesDefeated,
-      hasFinished: state.hasFinished,
-      masteryPoints: state.masteryPoints, idleTreeLevel: state.idleTreeLevel,
-      clickTreeLevel: state.clickTreeLevel, goldTreeLevel: state.goldTreeLevel,
-      critTreeLevel: state.critTreeLevel,
-      prestigeCount: state.prestigeCount
-    };
+    const json = JSON.stringify(buildSavePayload());
     if (storageOk()) {
-      await window.storage.set('save-state', JSON.stringify(payload), false);
+      await window.storage.set(saveKeyFor(state.playerName), json, false);
     } else if (localStoreOk()) {
-      window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(payload));
+      window.localStorage.setItem(saveKeyFor(state.playerName), json);
+      window.localStorage.setItem(LAST_NAME_KEY, state.playerName);
     }
   } catch (e) { /* 저장 실패해도 게임 진행에는 지장 없음 */ }
 }
 
-async function loadGame() {
-  if (!personalStoreOk()) return null;
+// 입력한 이름에 해당하는 저장이 있으면 반환, 없으면 null (= 새로 시작)
+async function loadGameByName(name) {
+  if (!personalStoreOk() || !name) return null;
   try {
     if (storageOk()) {
-      const result = await window.storage.get('save-state', false);
+      const result = await window.storage.get(saveKeyFor(name), false);
       return result ? JSON.parse(result.value) : null;
     }
     if (localStoreOk()) {
-      const raw = window.localStorage.getItem(LOCAL_SAVE_KEY);
+      const raw = window.localStorage.getItem(saveKeyFor(name));
       return raw ? JSON.parse(raw) : null;
     }
-    return null;
-  } catch (e) {
-    return null; // 저장된 게 없으면 첫 플레이로 간주
-  }
+  } catch (e) { return null; }
+  return null;
 }
 
+function getLastPlayerName() {
+  try {
+    return localStoreOk() ? (window.localStorage.getItem(LAST_NAME_KEY) || '') : '';
+  } catch (e) { return ''; }
+}
 
 function applySave(data) {
   state.playerName = data.playerName || '';
@@ -2975,10 +3001,25 @@ els.rankRefreshLink.addEventListener('click', renderLeaderboard);
 
 els.nameConfirm.addEventListener('click', async () => {
   const val = (els.nameInput.value || '').trim().slice(0, 16);
-  state.playerName = val || ('Player' + Math.floor(Math.random() * 10000));
+  const name = val || ('Player' + Math.floor(Math.random() * 10000));
+
+  // 같은 이름의 저장이 있으면 그대로 이어받고, 없으면 이 이름으로 새 판을 시작
+  const data = await loadGameByName(name);
+  if (data) {
+    applySave(data);
+    state.playerName = name;
+    els.logText.textContent = `👋 Welcome back, ${name}!`;
+    els.logText.className = 'log success';
+  } else {
+    state.playerName = name;
+    els.logText.textContent = 'Start by training';
+    els.logText.className = 'log';
+  }
+
   els.nameOverlay.classList.remove('show');
-  await saveGame();
+  setupStage();
   render();
+  await saveGame();
 });
 els.nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') els.nameConfirm.click(); });
 
@@ -2989,19 +3030,40 @@ setInterval(() => {
   if (autosaveCounter >= 10) { autosaveCounter = 0; saveGame(); }
 }, 1000);
 
-async function initPlayer() {
-  if (!personalStoreOk()) { setupStage(); render(); return; }
-  const data = await loadGame();
-  if (data && data.playerName) {
-    applySave(data);
-    setupStage();
-    render();
+// 게임은 항상 '이름 입력 → 시작' 순서로 진입한다.
+// 같은 이름을 다시 입력하면 그 이름의 저장을 그대로 이어받고, 처음 보는 이름이면 새로 시작.
+function initPlayer() {
+  setupStage();
+  render();
+  els.nameInput.value = getLastPlayerName();
+  els.nameOverlay.classList.add('show');
+  updateNameHint();
+}
+
+// 입력 중인 이름에 저장이 있는지 미리 알려줌 (이어하기인지 새 시작인지 헷갈리지 않도록)
+let nameHintTimer = null;
+async function updateNameHint() {
+  const val = (els.nameInput.value || '').trim().slice(0, 16);
+  if (!val) {
+    els.nameHint.textContent = '';
+    els.nameConfirm.textContent = 'Start Playing';
+    return;
+  }
+  const data = await loadGameByName(val);
+  if (data) {
+    els.nameHint.innerHTML = `✅ Save found — <b>Stage ${data.stage || 1}</b>, ${data.prestigeCount || 0} rebirths`;
+    els.nameHint.className = 'name-hint found';
+    els.nameConfirm.textContent = 'Continue';
   } else {
-    setupStage();
-    render();
-    els.nameOverlay.classList.add('show');
+    els.nameHint.textContent = 'New name — a fresh run will start.';
+    els.nameHint.className = 'name-hint';
+    els.nameConfirm.textContent = 'Start Playing';
   }
 }
+els.nameInput.addEventListener('input', () => {
+  clearTimeout(nameHintTimer);
+  nameHintTimer = setTimeout(updateNameHint, 250);
+});
 
 initPlayer();
 </script>
