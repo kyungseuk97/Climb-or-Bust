@@ -27,18 +27,26 @@
   ul { padding-left: 20px; }
   li { margin-bottom: 6px; }
   a { color: var(--accent); }
-  footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-dim); text-align: center; }
+  footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-dim); text-align: center; }  .top-nav {
+    position: fixed; top: 10px; right: 14px; z-index: 100;
+    display: flex; gap: 14px; font-size: 11px;
+  }
+  .top-nav a {
+    color: var(--ink-dim); text-decoration: none; padding: 4px 8px;
+    border-radius: 6px; background: rgba(20,23,31,0.7); border: 1px solid var(--line);
+  }
+  .top-nav a:hover { color: var(--accent); border-color: var(--accent); }
 </style>
 </head>
 <body>
+<div class="top-nav">
+  <a href="index.html">Play</a>
+  <a href="about.html">How to Play</a>
+</div>
 <div class="wrap">
 
   <div class="nav">
     <a class="brand" href="index.html">CLIMB OR BUST</a>
-    <div>
-      <a href="index.html">Play</a>
-      <a href="about.html">About</a>
-    </div>
   </div>
 
   <h1>Privacy Policy</h1>

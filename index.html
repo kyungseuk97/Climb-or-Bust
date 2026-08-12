@@ -29,6 +29,16 @@
     -webkit-tap-highlight-color: transparent;
   }
   .frame { width: 100%; max-width: 420px; position: relative; }
+
+  .top-nav {
+    position: fixed; top: 10px; right: 14px; z-index: 100;
+    display: flex; gap: 14px; font-size: 11px;
+  }
+  .top-nav a {
+    color: var(--ink-dim); text-decoration: none; padding: 4px 8px;
+    border-radius: 6px; background: rgba(20,23,31,0.7); border: 1px solid var(--line);
+  }
+  .top-nav a:hover { color: var(--accent); border-color: var(--accent); }
   .title {
     text-align: center;
     font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Franklin Gothic Bold', sans-serif;
@@ -726,6 +736,11 @@
 </head>
 <body>
 
+<div class="top-nav">
+  <a href="about.html">How to Play</a>
+  <a href="privacy.html">Privacy</a>
+</div>
+
 <div class="frame">
   <svg width="0" height="0" style="position:absolute">
     <filter id="fire-turb" x="-30%" y="-30%" width="160%" height="160%">
@@ -815,10 +830,6 @@
       <span id="stat-idle">Per Sec 0.00</span>
     </div>
     <button id="restart-btn" class="restart-link">⟳ Restart</button>
-    <div style="text-align:center; margin-top:10px; font-size:11px;">
-      <a href="about.html" style="color:var(--ink-dim); text-decoration:none; margin:0 8px;">About / How to Play</a>
-      <a href="privacy.html" style="color:var(--ink-dim); text-decoration:none; margin:0 8px;">Privacy</a>
-    </div>
   </div>
 
   <div class="panel side-panel" id="shop-panel">
